@@ -697,13 +697,77 @@
   .modal-save-btn:active { transform: scale(0.97); }
   .modal-save-btn:disabled { opacity: 0.4; cursor: default; }
 
-  /* ── Responsive ──────────────────────────────────────────────────────── */
+  /* ── Mobile bottom nav ───────────────────────────────────────────────── */
+  .mobile-nav {
+    display: none;
+  }
+
   @media (max-width: 640px) {
     body { padding: 0; }
-    .app { max-width: 100%; height: 100vh; border-radius: 0; box-shadow: none; }
+    .app { max-width: 100%; height: 100vh; border-radius: 0; box-shadow: none; flex-direction: column; }
     .sidebar { display: none; }
-    .main-header { padding: 18px 16px 12px; }
-    .task-content { padding: 8px 16px 80px; }
+    .main { flex: 1; min-height: 0; }
+    .main-header { padding: 18px 16px 10px; }
+    .task-content { padding: 8px 16px 90px; }
+    .notes-view { padding: 12px 16px 90px; }
+    .fab { bottom: 80px; right: 20px; }
+
+    .mobile-nav {
+      display: flex;
+      flex-shrink: 0;
+      height: 60px;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-top: 0.5px solid rgba(0,0,0,0.12);
+      align-items: stretch;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .mobile-nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      padding: 6px 4px;
+      font-family: inherit;
+      color: var(--label3);
+      transition: color 0.1s;
+      position: relative;
+    }
+
+    .mobile-nav-item.active { color: var(--blue); }
+    .mobile-nav-item.active svg { opacity: 1; }
+
+    .mobile-nav-item svg { width: 22px; height: 22px; opacity: 0.6; }
+
+    .mobile-nav-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.1px;
+    }
+
+    .mobile-nav-badge {
+      position: absolute;
+      top: 4px;
+      right: calc(50% - 16px);
+      background: var(--blue);
+      color: white;
+      font-size: 9px;
+      font-weight: 700;
+      min-width: 14px;
+      height: 14px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 3px;
+    }
   }
 </style>
 </head>
@@ -846,6 +910,70 @@
       <svg viewBox="0 0 20 20"><line x1="10" y1="3" x2="10" y2="17"/><line x1="3" y1="10" x2="17" y2="10"/></svg>
     </button>
   </main>
+
+  <!-- ── Mobile bottom nav ─────────────────────────────────────────── -->
+  <nav class="mobile-nav" id="mobile-nav">
+    <button class="mobile-nav-item" id="mn-inbox" onclick="setFilter('inbox',this);syncMobileNav('inbox')">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="13" width="20" height="8" rx="2" stroke="currentColor" stroke-width="1.7"/>
+        <path d="M2 13 L7 7 H17 L22 13" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" fill="none"/>
+        <line x1="8" y1="17" x2="16" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="mobile-nav-label">Inbox</span>
+      <span class="mobile-nav-badge" id="mnb-inbox" style="display:none"></span>
+    </button>
+    <button class="mobile-nav-item" id="mn-today" onclick="setFilter('today',this);syncMobileNav('today')">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="5" fill="currentColor" opacity="0.9"/>
+        <line x1="12" y1="2" x2="12" y2="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <line x1="12" y1="20" x2="12" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <line x1="2" y1="12" x2="4" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <line x1="20" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span class="mobile-nav-label">Today</span>
+      <span class="mobile-nav-badge" id="mnb-today" style="display:none"></span>
+    </button>
+    <button class="mobile-nav-item active" id="mn-all" onclick="setFilter('all',this);syncMobileNav('all')">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="3" y="5" width="18" height="2.5" rx="1.25" fill="currentColor"/>
+        <rect x="3" y="11" width="18" height="2.5" rx="1.25" fill="currentColor"/>
+        <rect x="3" y="17" width="12" height="2.5" rx="1.25" fill="currentColor"/>
+      </svg>
+      <span class="mobile-nav-label">All</span>
+    </button>
+    <button class="mobile-nav-item" id="mn-shop" onclick="setFilter('shop',this);syncMobileNav('shop')">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 9h18l-2 10H5L3 9z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+        <path d="M8 9V6a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+      </svg>
+      <span class="mobile-nav-label">Shop</span>
+      <span class="mobile-nav-badge" id="mnb-shop" style="display:none"></span>
+    </button>
+    <button class="mobile-nav-item" id="mn-more" onclick="toggleMobileMore()">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="5" cy="12" r="2" fill="currentColor"/>
+        <circle cx="12" cy="12" r="2" fill="currentColor"/>
+        <circle cx="19" cy="12" r="2" fill="currentColor"/>
+      </svg>
+      <span class="mobile-nav-label">More</span>
+    </button>
+  </nav>
+
+  <!-- Mobile "More" drawer -->
+  <div id="mobile-more-drawer" style="display:none; position:fixed; bottom:60px; left:0; right:0; z-index:400; background:rgba(255,255,255,0.96); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border-top:0.5px solid rgba(0,0,0,0.12); padding:8px;">
+    <button onclick="setFilter('design',null);syncMobileNav('design');closeMobileMore()" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;border:none;background:none;font-family:inherit;font-size:15px;color:var(--label);cursor:pointer;border-radius:10px;" onmouseover="this.style.background='rgba(0,0,0,0.04)'" onmouseout="this.style.background='none'">
+      <span style="width:10px;height:10px;border-radius:50%;background:var(--purple);flex-shrink:0;"></span> Design
+    </button>
+    <button onclick="setFilter('personal',null);syncMobileNav('personal');closeMobileMore()" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;border:none;background:none;font-family:inherit;font-size:15px;color:var(--label);cursor:pointer;border-radius:10px;" onmouseover="this.style.background='rgba(0,0,0,0.04)'" onmouseout="this.style.background='none'">
+      <span style="width:10px;height:10px;border-radius:50%;background:var(--orange);flex-shrink:0;"></span> Personal
+    </button>
+    <button onclick="setFilter('logbook',null);syncMobileNav('logbook');closeMobileMore()" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;border:none;background:none;font-family:inherit;font-size:15px;color:var(--label);cursor:pointer;border-radius:10px;" onmouseover="this.style.background='rgba(0,0,0,0.04)'" onmouseout="this.style.background='none'">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><rect x="2" y="1.5" width="12" height="13" rx="1.5" stroke="#34C759" stroke-width="1.4"/><polyline points="5,8 7,10 11,6" stroke="#34C759" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Logbook
+    </button>
+    <button onclick="setFilter('notes',null);syncMobileNav('notes');closeMobileMore()" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;border:none;background:none;font-family:inherit;font-size:15px;color:var(--label);cursor:pointer;border-radius:10px;" onmouseover="this.style.background='rgba(0,0,0,0.04)'" onmouseout="this.style.background='none'">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="1.5" width="11" height="13" rx="1.5" stroke="#8E8E93" stroke-width="1.4"/><line x1="5" y1="5.5" x2="11" y2="5.5" stroke="#8E8E93" stroke-width="1.2" stroke-linecap="round"/><line x1="5" y1="8" x2="11" y2="8" stroke="#8E8E93" stroke-width="1.2" stroke-linecap="round"/><line x1="5" y1="10.5" x2="8.5" y2="10.5" stroke="#8E8E93" stroke-width="1.2" stroke-linecap="round"/></svg> Notes
+    </button>
+  </div>
 </div>
 
 <!-- ── Add Task Modal ────────────────────────────────────────────── -->
@@ -1853,6 +1981,41 @@ document.getElementById("mt-title").addEventListener("input", function() {
 loadState();
 loadCustomMeta();
 render();
+
+// ── Mobile nav helpers ───────────────────────────────────────────────────
+function syncMobileNav(filter) {
+  document.querySelectorAll(".mobile-nav-item").forEach(b => b.classList.remove("active"));
+  const btn = document.getElementById("mn-" + filter);
+  if (btn) btn.classList.add("active");
+  // Update badges
+  const counts = {
+    inbox: allTasks().filter(t => t.area === "inbox" && !state[t.id]).length,
+    today: allTasks().filter(t => t.today && !state[t.id]).length,
+    shop:  allTasks().filter(t => t.area === "shop"  && !state[t.id]).length,
+  };
+  Object.entries(counts).forEach(([k,v]) => {
+    const b = document.getElementById("mnb-" + k);
+    if (b) { b.textContent = v; b.style.display = v > 0 ? "flex" : "none"; }
+  });
+}
+
+function toggleMobileMore() {
+  const d = document.getElementById("mobile-more-drawer");
+  d.style.display = d.style.display === "none" ? "block" : "none";
+}
+function closeMobileMore() {
+  document.getElementById("mobile-more-drawer").style.display = "none";
+}
+document.addEventListener("click", e => {
+  const drawer = document.getElementById("mobile-more-drawer");
+  const btn = document.getElementById("mn-more");
+  if (!drawer.contains(e.target) && !btn.contains(e.target)) {
+    drawer.style.display = "none";
+  }
+});
+
+// Init mobile nav badges on load
+syncMobileNav("all");
 </script>
 </body>
 </html>
