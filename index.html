@@ -531,17 +531,38 @@
     min-width: 18px; height: 16px; padding: 0 5px;
   }
 
-  /* ── Notes view ──────────────────────────────────────────────────────── */
-  .notes-view {
-    flex: 1; overflow-y: auto;
-    padding: 20px 32px 52px;
+  /* ── Project list (area drill-down) ─────────────────────────────────── */
+  .project-list { padding: 8px 16px 80px; }
+  .project-card {
+    display: flex; align-items: center;
+    padding: 14px 16px; background: #fff;
+    border-radius: 12px; margin-bottom: 8px;
+    cursor: pointer; border: none; width: 100%; text-align: left;
+    transition: background 0.15s;
   }
-  .notes-view textarea {
-    width: 100%; height: 100%; min-height: calc(100vh - 200px);
-    font-family: inherit; font-size: 15px; line-height: 1.7;
-    color: var(--label); background: transparent;
-    border: none; outline: none; resize: none;
-    display: block; box-sizing: border-box;
+  .project-card:hover  { background: #f5f5f7; }
+  .project-card:active { background: #ebebf0; }
+  .project-card-icon { color: var(--label3); flex-shrink: 0; }
+  .project-card-body { flex: 1; margin-left: 12px; }
+  .project-card-name  { font-size: 16px; font-weight: 600; color: var(--label); }
+  .project-card-count { font-size: 13px; color: var(--label3); margin-top: 2px; }
+  .project-card-arrow { color: var(--label4); flex-shrink: 0; margin-left: 8px; }
+
+  /* ── Drag to reorder ─────────────────────────────────────────────────── */
+  .drag-handle {
+    display: none; /* shown only in draggable views */
+    align-items: center; justify-content: center;
+    width: 20px; flex-shrink: 0; cursor: grab;
+    color: var(--label4); padding: 4px 2px; margin-right: 2px;
+    touch-action: none;
+  }
+  .drag-handle:active { cursor: grabbing; }
+  .draggable-view .drag-handle { display: flex; }
+  .task-row.dragging { opacity: 0.4; }
+  .task-row.drag-over { border-top: 2px solid var(--blue); }
+  .drag-placeholder {
+    border-radius: 10px; background: var(--blue-light);
+    border: 2px dashed var(--blue); margin-bottom: 6px;
   }
 
   /* ── Floating action button ──────────────────────────────────────────── */
@@ -1572,6 +1593,8 @@ const VIEW_TITLES = {
 
 let state = {};
 let currentFilter = "all";
+let currentSectionCtx = null; // { name, area } when in __sec__ view
+let navStack = [];             // for multi-level back navigation
 let dynamicTasks = [];
 
 function loadState() {
@@ -1914,11 +1937,23 @@ function toggleSubtasks(taskId) {
   saveState(); render();
 }
 
+function isAreaFilter(f) {
+  return ['shop','design','personal'].includes(f) || customAreas.some(a => a.id === f);
+}
+
 function setFilter(f, btn) {
   currentFilter = f;
+  currentSectionCtx = null;
+  navStack = [];
   document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("active"));
   btn.classList.add("active");
-  document.getElementById('view-title').textContent = VIEW_TITLES[f] || f;
+  // Title
+  let title = VIEW_TITLES[f];
+  if (!title) {
+    const ca = customAreas.find(a => a.id === f);
+    title = ca ? ca.label : f;
+  }
+  document.getElementById('view-title').textContent = title;
 
   // Show/hide panels
   const panels = { 'task-content': false, 'logbook-panel': false, 'upcoming-panel': false };
@@ -1934,9 +1969,60 @@ function setFilter(f, btn) {
     renderLogbook();
   } else if (f === 'upcoming') {
     renderUpcoming();
+  } else if (isAreaFilter(f)) {
+    renderAreaProjects(f);
   } else {
     render();
   }
+}
+
+function renderAreaProjects(areaName) {
+  const all = allTasks();
+  const tA = t => state[t.id]?.areaOverride    || t.area;
+  const tS = t => state[t.id]?.sectionOverride || t.section;
+  const secMap = {};
+  all.filter(t => !state[t.id]?.completed && tA(t) === areaName)
+     .forEach(t => { const s = tS(t); secMap[s] = (secMap[s]||0) + 1; });
+
+  const mainTasks = document.getElementById("main-tasks");
+  document.getElementById("done-section").innerHTML = "";
+  document.getElementById("task-content").classList.remove("draggable-view");
+
+  const entries = Object.entries(secMap);
+  if (!entries.length) {
+    mainTasks.innerHTML = `<div class="inbox-empty"><div class="inbox-empty-icon">📂</div>No projects yet</div>`;
+    return;
+  }
+
+  const folderSVG = `<svg viewBox="0 0 20 16" width="20" height="16" fill="none"><path d="M1 3.5A1.5 1.5 0 012.5 2H7l2 2h8.5A1.5 1.5 0 0119 5.5V13a1.5 1.5 0 01-1.5 1.5h-15A1.5 1.5 0 011 13V3.5z" stroke="currentColor" stroke-width="1.5"/></svg>`;
+  const chevSVG  = `<svg viewBox="0 0 8 14" width="8" height="14" fill="none"><polyline points="1,1 7,7 1,13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+  mainTasks.innerHTML = `<div class="project-list">${
+    entries.map(([name, count]) => `
+      <button class="project-card" onclick="enterSection(${JSON.stringify(name)}, ${JSON.stringify(areaName)})">
+        <div class="project-card-icon">${folderSVG}</div>
+        <div class="project-card-body">
+          <div class="project-card-name">${name}</div>
+          <div class="project-card-count">${count} task${count!==1?'s':''}</div>
+        </div>
+        <div class="project-card-arrow">${chevSVG}</div>
+      </button>`).join("")
+  }</div>`;
+}
+
+function enterSection(secName, areaName) {
+  navStack.push({
+    filter: currentFilter,
+    sectionCtx: currentSectionCtx ? {...currentSectionCtx} : null,
+    title: document.getElementById('view-title').textContent
+  });
+  currentFilter = "__sec__";
+  currentSectionCtx = { name: secName, area: areaName };
+  document.getElementById('view-title').textContent = secName;
+  document.getElementById('task-content').style.display = '';
+  document.getElementById('logbook-panel').style.display = 'none';
+  document.getElementById('upcoming-panel').style.display = 'none';
+  render();
 }
 
 
@@ -2177,8 +2263,11 @@ function taskRowHTML(t) {
       <button class="add-sub-btn${subInputOpen?" is-open":""}" onclick="toggleSubtaskInput('${t.id}')" title="Add step">${plusSVG}</button>
     </div>` : "";
 
+  const gripSVG = `<svg viewBox="0 0 10 16" width="10" height="16" fill="currentColor"><circle cx="3" cy="3" r="1.5"/><circle cx="7" cy="3" r="1.5"/><circle cx="3" cy="8" r="1.5"/><circle cx="7" cy="8" r="1.5"/><circle cx="3" cy="13" r="1.5"/><circle cx="7" cy="13" r="1.5"/></svg>`;
+
   return `
-    <div class="task-row${isDone?" is-done":""}${isOverdue?" is-overdue":""}${isToday?" is-today":""}">
+    <div class="task-row${isDone?" is-done":""}${isOverdue?" is-overdue":""}${isToday?" is-today":""}" data-task-id="${t.id}" id="trow-${t.id}">
+      <div class="drag-handle" title="Drag to reorder">${gripSVG}</div>
       <div class="check-wrap">
         <input type="checkbox" class="task-check" ${isDone?"checked":""} onchange="toggleTask('${t.id}')">
         <div class="check-circle">${checkSVG}</div>
@@ -2207,11 +2296,22 @@ function render() {
 
   const visible = all.filter(t => {
     if (state[t.id]?.completed) return false;
-    if (currentFilter === "today")  return !!state[t.id]?.today || state[t.id]?.due === todayStr;
-    if (currentFilter === "inbox")  return tArea(t) === "inbox";
-    if (currentFilter === "all")    return tArea(t) !== "inbox";
+    if (currentFilter === "today")   return !!state[t.id]?.today || state[t.id]?.due === todayStr;
+    if (currentFilter === "inbox")   return tArea(t) === "inbox";
+    if (currentFilter === "all")     return tArea(t) !== "inbox";
+    if (currentFilter === "__sec__") return currentSectionCtx && tArea(t) === currentSectionCtx.area && tSection(t) === currentSectionCtx.name;
     return tArea(t) === currentFilter;
   });
+
+  function applyOrder(tasks) {
+    const key = currentFilter === "__sec__"
+      ? `sec:${currentSectionCtx?.name}:${currentSectionCtx?.area}`
+      : currentFilter;
+    const order = state._order?.[key];
+    if (!order) return tasks;
+    const om = {}; order.forEach((id,i) => om[id]=i);
+    return [...tasks].sort((a,b) => (om[a.id]??9999)-(om[b.id]??9999));
+  }
 
   // Group by section
   const secMap = {};
@@ -2244,7 +2344,9 @@ function render() {
   // View subtitle
   const openCount = visible.filter(t => !state[t.id]?.completed).length;
   const sub = document.getElementById("view-subtitle");
-  if (sub) sub.textContent = currentFilter === "notes" ? "" : `${openCount} open task${openCount !== 1 ? "s" : ""}`;
+  if (sub) sub.textContent = `${openCount} open task${openCount !== 1 ? "s" : ""}`;
+
+  document.getElementById("task-content").classList.remove("draggable-view");
 
   // Inbox: flat task list with "Move to…" on each row
   if (currentFilter === "inbox") {
@@ -2257,12 +2359,31 @@ function render() {
     return;
   }
 
-  // Today: flat list grouped by section label (no collapse)
+  // Today: flat list, draggable
   if (currentFilter === "today") {
-    if (!visible.length) {
+    const ordered = applyOrder(visible);
+    if (!ordered.length) {
       mainTasks.innerHTML = `<div class="inbox-empty"><div class="inbox-empty-icon">✓</div>Nothing flagged for today</div>`;
+      document.getElementById("task-content").classList.remove("draggable-view");
     } else {
-      mainTasks.innerHTML = visible.map(taskRowHTML).join("");
+      document.getElementById("task-content").classList.add("draggable-view");
+      mainTasks.innerHTML = ordered.map(taskRowHTML).join("");
+      setTimeout(initDragHandlers, 30);
+    }
+    doneSec.innerHTML = "";
+    return;
+  }
+
+  // Section view: flat task list, draggable
+  if (currentFilter === "__sec__") {
+    const ordered = applyOrder(visible);
+    if (!ordered.length) {
+      mainTasks.innerHTML = `<div class="inbox-empty"><div class="inbox-empty-icon">📋</div>No tasks in this project</div>`;
+      document.getElementById("task-content").classList.remove("draggable-view");
+    } else {
+      document.getElementById("task-content").classList.add("draggable-view");
+      mainTasks.innerHTML = ordered.map(taskRowHTML).join("");
+      setTimeout(initDragHandlers, 30);
     }
     doneSec.innerHTML = "";
     return;
@@ -2722,8 +2843,135 @@ function mobileShowDetail() {
 }
 
 function mobileGoBack() {
+  if (navStack.length > 0) {
+    const prev = navStack.pop();
+    currentFilter = prev.filter;
+    currentSectionCtx = prev.sectionCtx;
+    document.getElementById('view-title').textContent = prev.title;
+    document.getElementById('task-content').style.display = '';
+    document.getElementById('logbook-panel').style.display = 'none';
+    document.getElementById('upcoming-panel').style.display = 'none';
+    if (isAreaFilter(currentFilter)) {
+      renderAreaProjects(currentFilter);
+    } else {
+      render();
+    }
+    return;
+  }
+  // No stack — go back to sidebar home
+  currentSectionCtx = null;
   document.querySelector(".sidebar").classList.remove("mobile-hidden");
   document.getElementById("main-panel").classList.remove("mobile-visible");
+}
+
+// ── Drag to reorder ──────────────────────────────────────────────────────
+let _dragId = null;
+let _touchDrag = { active: false };
+
+function _getOrderKey() {
+  if (currentFilter === "__sec__" && currentSectionCtx)
+    return `sec:${currentSectionCtx.name}:${currentSectionCtx.area}`;
+  return currentFilter;
+}
+
+function _reorder(fromId, toId) {
+  if (!fromId || !toId || fromId === toId) return;
+  const all = allTasks();
+  const todayStr = new Date().toLocaleDateString("en-CA");
+  const tA = t => state[t.id]?.areaOverride    || t.area;
+  const tS = t => state[t.id]?.sectionOverride || t.section;
+  let vis = all.filter(t => {
+    if (state[t.id]?.completed) return false;
+    if (currentFilter === "today") return !!state[t.id]?.today || state[t.id]?.due === todayStr;
+    if (currentFilter === "__sec__") return currentSectionCtx && tA(t)===currentSectionCtx.area && tS(t)===currentSectionCtx.name;
+    return false;
+  });
+  const key = _getOrderKey();
+  const order = state._order?.[key];
+  if (order) {
+    const om = {}; order.forEach((id,i) => om[id]=i);
+    vis = [...vis].sort((a,b) => (om[a.id]??9999)-(om[b.id]??9999));
+  }
+  const ids = vis.map(t => t.id);
+  const from = ids.indexOf(fromId), to = ids.indexOf(toId);
+  if (from < 0 || to < 0) return;
+  ids.splice(from, 1);
+  ids.splice(to, 0, fromId);
+  if (!state._order) state._order = {};
+  state._order[key] = ids;
+  saveState(); schedPush(); render();
+  setTimeout(initDragHandlers, 40);
+}
+
+// HTML5 drag
+function _onDragStart(e) { _dragId = this.dataset.taskId; this.classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; }
+function _onDragOver(e)  { e.preventDefault(); document.querySelectorAll(".drag-over").forEach(el=>el.classList.remove("drag-over")); this.classList.add("drag-over"); }
+function _onDragLeave()  { this.classList.remove("drag-over"); }
+function _onDrop(e)      { e.preventDefault(); const tid=this.dataset.taskId; this.classList.remove("drag-over"); _reorder(_dragId, tid); _dragId=null; }
+function _onDragEnd()    { _dragId=null; document.querySelectorAll(".dragging,.drag-over").forEach(el=>el.classList.remove("dragging","drag-over")); }
+
+// Touch drag
+function _onTouchStart(e) {
+  const id = this.dataset.taskId;
+  const touch = e.touches[0];
+  const row = this;
+  _touchDrag = { active: false, id, row, startX: touch.clientX, startY: touch.clientY, timer: null };
+  _touchDrag.timer = setTimeout(() => {
+    const rect = row.getBoundingClientRect();
+    const ph = document.createElement("div");
+    ph.className = "drag-placeholder"; ph.style.height = rect.height + "px";
+    row.after(ph);
+    Object.assign(row.style, { position:"fixed", left:rect.left+"px", top:(touch.clientY-(touch.clientY-rect.top))+"px", width:rect.width+"px", zIndex:"999", opacity:"0.85", boxShadow:"0 8px 24px rgba(0,0,0,0.18)", borderRadius:"10px" });
+    _touchDrag = { ..._touchDrag, active:true, ph, offsetY: touch.clientY - rect.top };
+    if (navigator.vibrate) navigator.vibrate(50);
+  }, 420);
+}
+function _onTouchMove(e) {
+  if (!_touchDrag.id) return;
+  if (!_touchDrag.active) {
+    const t = e.touches[0];
+    if (Math.abs(t.clientX-_touchDrag.startX)>8 || Math.abs(t.clientY-_touchDrag.startY)>8) {
+      clearTimeout(_touchDrag.timer); _touchDrag = { active:false };
+    }
+    return;
+  }
+  e.preventDefault();
+  const t = e.touches[0];
+  _touchDrag.row.style.top = (t.clientY - _touchDrag.offsetY) + "px";
+  _touchDrag.row.style.display = "none";
+  const el = document.elementFromPoint(t.clientX, t.clientY);
+  _touchDrag.row.style.display = "";
+  const target = el?.closest("[data-task-id]");
+  if (target && target !== _touchDrag.row) {
+    _touchDrag.dropId = target.dataset.taskId;
+    target.after(_touchDrag.ph);
+  }
+}
+function _onTouchEnd() {
+  if (!_touchDrag.id) return;
+  clearTimeout(_touchDrag.timer);
+  if (_touchDrag.active) {
+    const row = _touchDrag.row;
+    _touchDrag.ph?.remove();
+    Object.assign(row.style, { position:"", left:"", top:"", width:"", zIndex:"", opacity:"", boxShadow:"", borderRadius:"" });
+    if (_touchDrag.dropId) _reorder(_touchDrag.id, _touchDrag.dropId);
+  }
+  _touchDrag = { active: false };
+}
+
+function initDragHandlers() {
+  if (currentFilter !== "today" && currentFilter !== "__sec__") return;
+  document.querySelectorAll("[data-task-id]").forEach(row => {
+    row.draggable = true;
+    row.addEventListener("dragstart",  _onDragStart);
+    row.addEventListener("dragover",   _onDragOver);
+    row.addEventListener("dragleave",  _onDragLeave);
+    row.addEventListener("drop",       _onDrop);
+    row.addEventListener("dragend",    _onDragEnd);
+    row.addEventListener("touchstart", _onTouchStart, { passive: true });
+    row.addEventListener("touchmove",  _onTouchMove,  { passive: false });
+    row.addEventListener("touchend",   _onTouchEnd);
+  });
 }
 
 // On mobile, tapping a nav item should drill into detail
