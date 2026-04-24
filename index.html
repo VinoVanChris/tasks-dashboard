@@ -74,6 +74,46 @@
     padding: 22px 16px 14px;
   }
 
+  /* ── Search ─────────────────────────────────────────────────────────── */
+  .search-btn {
+    background: none; border: none; cursor: pointer; padding: 4px;
+    color: var(--label3); display: flex; align-items: center;
+    margin-left: auto; border-radius: 6px; transition: color 0.15s;
+  }
+  .search-btn:hover { color: var(--blue); }
+  .search-bar {
+    padding: 0 16px 10px; display: none;
+  }
+  .search-bar.visible { display: block; }
+  .search-input-wrap {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--sidebar-bg); border-radius: 10px; padding: 8px 12px;
+    border: 1.5px solid transparent; transition: border-color 0.15s;
+  }
+  .search-input-wrap:focus-within { border-color: var(--blue); background: #fff; }
+  .search-input-wrap svg { color: var(--label3); flex-shrink: 0; }
+  .search-input {
+    border: none; outline: none; background: transparent;
+    font-family: inherit; font-size: 15px; color: var(--label); width: 100%;
+  }
+  .search-input::placeholder { color: var(--label4); }
+  .search-clear {
+    background: none; border: none; cursor: pointer; color: var(--label4);
+    padding: 0; font-size: 18px; line-height: 1; display: none;
+  }
+  .search-clear.visible { display: block; }
+  .search-result {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 16px; cursor: pointer; border-radius: 10px;
+    transition: background 0.1s; margin-bottom: 2px;
+  }
+  .search-result:hover { background: var(--sidebar-bg); }
+  .search-result-body { flex: 1; min-width: 0; }
+  .search-result-title { font-size: 15px; color: var(--label); font-weight: 500; }
+  .search-result-title mark { background: rgba(0,122,255,0.15); color: var(--blue); border-radius: 3px; padding: 0 2px; font-weight: 600; }
+  .search-result-context { font-size: 12px; color: var(--label3); margin-top: 2px; }
+  .search-empty { padding: 40px 16px; text-align: center; color: var(--label3); font-size: 15px; }
+
   .sync-dot {
     width: 7px; height: 7px; border-radius: 50%;
     background: var(--label4); flex-shrink: 0;
@@ -1081,6 +1121,9 @@
         </svg>
       </div>
       <span class="app-name">Tasks</span>
+      <button class="search-btn" onclick="openSearch()" title="Search">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10" y1="10" x2="14" y2="14"/></svg>
+      </button>
       <span class="sync-dot" id="sync-dot" title="Sync" onclick="openTokenModal()"></span>
     </div>
 
@@ -1194,6 +1237,17 @@
       </button>
       <div class="view-title" id="view-title">All Tasks</div>
       <div class="view-subtitle" id="view-subtitle"></div>
+    </div>
+
+    <!-- Search bar -->
+    <div class="search-bar" id="search-bar">
+      <div class="search-input-wrap">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10" y1="10" x2="14" y2="14"/></svg>
+        <input class="search-input" id="search-input" type="search" placeholder="Search tasks…"
+          oninput="doSearch(this.value)"
+          onkeydown="if(event.key==='Escape')closeSearch()">
+        <button class="search-clear" id="search-clear" onclick="clearSearch()">×</button>
+      </div>
     </div>
 
     <!-- Tasks view -->
@@ -2103,6 +2157,9 @@ function isAreaFilter(f) {
 }
 
 function setFilter(f, btn) {
+  // Clear search if active
+  document.getElementById("search-bar").classList.remove("visible");
+  document.getElementById("search-input").value = "";
   currentFilter = f;
   currentSectionCtx = null;
   navStack = [];
@@ -3076,6 +3133,92 @@ function mobileGoBack() {
   currentSectionCtx = null;
   document.querySelector(".sidebar").classList.remove("mobile-hidden");
   document.getElementById("main-panel").classList.remove("mobile-visible");
+}
+
+// ── Search ───────────────────────────────────────────────────────────────
+function openSearch() {
+  currentFilter = "__search__";
+  currentSectionCtx = null;
+  navStack = [];
+  document.getElementById("search-bar").classList.add("visible");
+  document.getElementById("view-title").textContent = "Search";
+  document.getElementById("view-subtitle").textContent = "";
+  document.getElementById("task-content").style.display = "";
+  document.getElementById("logbook-panel").style.display = "none";
+  document.getElementById("upcoming-panel").style.display = "none";
+  document.getElementById("task-content").classList.remove("draggable-view");
+  document.getElementById("main-tasks").innerHTML = "";
+  document.getElementById("done-section").innerHTML = "";
+  document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("active"));
+  if (isMobile()) mobileShowDetail();
+  setTimeout(() => document.getElementById("search-input").focus(), 80);
+}
+
+function closeSearch() {
+  document.getElementById("search-bar").classList.remove("visible");
+  document.getElementById("search-input").value = "";
+  document.getElementById("search-clear").classList.remove("visible");
+  currentFilter = "all";
+  document.getElementById("view-title").textContent = "All Tasks";
+  render();
+  if (isMobile()) mobileGoBack();
+}
+
+function clearSearch() {
+  document.getElementById("search-input").value = "";
+  document.getElementById("search-clear").classList.remove("visible");
+  document.getElementById("main-tasks").innerHTML = "";
+  document.getElementById("search-input").focus();
+}
+
+function doSearch(q) {
+  const clear = document.getElementById("search-clear");
+  clear.classList.toggle("visible", q.length > 0);
+  if (!q.trim()) { document.getElementById("main-tasks").innerHTML = ""; return; }
+
+  const query = q.trim().toLowerCase();
+  const all   = allTasks();
+  const tA    = t => state[t.id]?.areaOverride    || t.area;
+  const tS    = t => state[t.id]?.sectionOverride || t.section;
+
+  const results = all.filter(t => {
+    if (state[t.id]?.completed) return false;
+    const title  = t.title.toLowerCase();
+    const detail = (state[t.id]?.note || t.detail || "").toLowerCase();
+    return title.includes(query) || detail.includes(query);
+  });
+
+  const AREA_NAMES = { shop:"Shop", design:"Design", personal:"Personal", inbox:"Inbox" };
+
+  function highlight(text) {
+    const idx = text.toLowerCase().indexOf(query);
+    if (idx < 0) return text;
+    return text.slice(0, idx) + "<mark>" + text.slice(idx, idx + query.length) + "</mark>" + text.slice(idx + query.length);
+  }
+
+  const priorityDotHTML = t => {
+    const p = state[t.id]?.priority;
+    if (!p) return "";
+    const col = p === "urgent" ? "var(--red)" : "var(--orange)";
+    return `<div style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0;margin-top:5px"></div>`;
+  };
+
+  if (!results.length) {
+    document.getElementById("main-tasks").innerHTML = `<div class="search-empty">No tasks matching "<strong>${q}</strong>"</div>`;
+    return;
+  }
+
+  document.getElementById("main-tasks").innerHTML = results.map(t => {
+    const areaName = AREA_NAMES[tA(t)] || customAreas.find(a=>a.id===tA(t))?.label || tA(t);
+    const context  = `${areaName} › ${tS(t)}`;
+    return `<div class="search-result" onclick="openEditTask('${t.id}')">
+      ${priorityDotHTML(t)}
+      <div class="search-result-body">
+        <div class="search-result-title">${highlight(t.title)}</div>
+        <div class="search-result-context">${context}</div>
+      </div>
+    </div>`;
+  }).join("");
 }
 
 // ── Drag to reorder ──────────────────────────────────────────────────────
