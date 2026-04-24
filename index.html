@@ -838,6 +838,58 @@
   .upcoming-day-label { font-size: 16px; font-weight: 500; color: var(--label3); }
   .upcoming-empty { text-align: center; color: var(--label3); font-size: 14px; padding: 60px 0; }
 
+  /* ── FAB context menu ───────────────────────────────────────────────────── */
+  .fab-menu {
+    display: none; position: absolute; bottom: 88px; right: 28px;
+    background: #2C2C2E; border-radius: 14px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.18);
+    overflow: hidden; z-index: 50; min-width: 240px;
+    animation: sheetIn 0.15s cubic-bezier(0.34,1.4,0.64,1);
+  }
+  .fab-menu.open { display: block; }
+  .fab-menu-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 18px; cursor: pointer;
+    transition: background 0.1s; border: none;
+    background: transparent; width: 100%; text-align: left;
+    font-family: inherit;
+  }
+  .fab-menu-item:not(:last-child) { border-bottom: 0.5px solid rgba(255,255,255,0.08); }
+  .fab-menu-item:hover { background: rgba(255,255,255,0.06); }
+  .fab-menu-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 17px;
+  }
+  .fab-menu-icon.task-icon    { background: rgba(255,255,255,0.15); }
+  .fab-menu-icon.section-icon { background: rgba(0,122,255,0.25); }
+  .fab-menu-icon.area-icon    { background: rgba(52,199,89,0.25); }
+  .fab-menu-text { display: flex; flex-direction: column; gap: 1px; }
+  .fab-menu-label { font-size: 15px; font-weight: 600; color: white; }
+  .fab-menu-desc  { font-size: 12px; color: rgba(255,255,255,0.45); }
+
+  /* New Area / Section inline modals */
+  .quick-modal {
+    display: none; position: fixed; inset: 0; z-index: 700;
+    background: rgba(0,0,0,0.4); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    align-items: center; justify-content: center;
+  }
+  .quick-modal.open { display: flex; }
+  .quick-sheet {
+    background: #fff; border-radius: 14px; padding: 24px;
+    width: 360px; max-width: calc(100vw - 40px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    animation: sheetIn 0.18s cubic-bezier(0.34,1.4,0.64,1);
+  }
+  .quick-sheet h3 { font-size: 16px; font-weight: 700; margin-bottom: 14px; color: var(--label); }
+  .quick-input {
+    width: 100%; font-family: inherit; font-size: 15px;
+    border: 1px solid rgba(0,0,0,0.12); border-radius: 8px;
+    padding: 10px 12px; outline: none; margin-bottom: 10px; color: var(--label);
+  }
+  .quick-input:focus { border-color: var(--blue); }
+  .quick-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
   /* ── Mobile back button (hidden on desktop) ──────────────────────────── */
   .mobile-back-btn { display: none; }
 
@@ -1034,6 +1086,9 @@
       </button>
     </nav>
 
+    <!-- Custom areas injected here -->
+    <nav class="sidebar-nav" id="custom-areas-nav"></nav>
+
     <div class="sidebar-spacer"></div>
     <div class="sidebar-divider"></div>
 
@@ -1099,11 +1154,63 @@
         oninput="saveNotesPad(this.value)"></textarea>
     </div>
 
+    <!-- FAB context menu -->
+    <div class="fab-menu" id="fab-menu">
+      <button class="fab-menu-item" onclick="closeFabMenu();openAddTask()">
+        <span class="fab-menu-icon task-icon">＋</span>
+        <span class="fab-menu-text">
+          <span class="fab-menu-label">New Task</span>
+          <span class="fab-menu-desc">Add a task to the current view</span>
+        </span>
+      </button>
+      <button class="fab-menu-item" onclick="closeFabMenu();openNewSectionModal()">
+        <span class="fab-menu-icon section-icon"><svg width="17" height="17" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="#0A84FF" stroke-width="1.8"/><line x1="10" y1="6" x2="10" y2="14" stroke="#0A84FF" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="10" x2="14" y2="10" stroke="#0A84FF" stroke-width="2" stroke-linecap="round"/></svg></span>
+        <span class="fab-menu-text">
+          <span class="fab-menu-label">New Section</span>
+          <span class="fab-menu-desc">Add a section within an area</span>
+        </span>
+      </button>
+      <button class="fab-menu-item" onclick="closeFabMenu();openNewAreaModal()">
+        <span class="fab-menu-icon area-icon"><svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M3 5h14M3 10h14M3 15h8" stroke="#34C759" stroke-width="2" stroke-linecap="round"/></svg></span>
+        <span class="fab-menu-text">
+          <span class="fab-menu-label">New Area</span>
+          <span class="fab-menu-desc">Group tasks by responsibility</span>
+        </span>
+      </button>
+    </div>
+
     <!-- Floating + button -->
-    <button class="fab" onclick="openAddTask()" title="New task (⌘N)">
+    <button class="fab" id="main-fab" onclick="toggleFabMenu()" title="New (⌘N)">
       <svg viewBox="0 0 20 20"><line x1="10" y1="3" x2="10" y2="17"/><line x1="3" y1="10" x2="17" y2="10"/></svg>
     </button>
   </main>
+</div>
+
+<!-- ── New Section Modal ─────────────────────────────────────────── -->
+<div class="quick-modal" id="new-section-modal">
+  <div class="quick-sheet">
+    <h3>New Section</h3>
+    <select class="quick-input" id="qs-area" style="margin-bottom:10px;cursor:pointer;"></select>
+    <input class="quick-input" id="qs-name" type="text" placeholder="Section name…"
+      onkeydown="if(event.key==='Enter')confirmQuickSection();if(event.key==='Escape')closeNewSectionModal()">
+    <div class="quick-actions">
+      <button class="modal-cancel-btn" onclick="closeNewSectionModal()">Cancel</button>
+      <button class="modal-save-btn" onclick="confirmQuickSection()">Add Section</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── New Area Modal ─────────────────────────────────────────────── -->
+<div class="quick-modal" id="new-area-modal">
+  <div class="quick-sheet">
+    <h3>New Area</h3>
+    <input class="quick-input" id="qa-name" type="text" placeholder="Area name…"
+      onkeydown="if(event.key==='Enter')confirmQuickArea();if(event.key==='Escape')closeNewAreaModal()">
+    <div class="quick-actions">
+      <button class="modal-cancel-btn" onclick="closeNewAreaModal()">Cancel</button>
+      <button class="modal-save-btn" onclick="confirmQuickArea()">Add Area</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── When Picker ───────────────────────────────────────────────── -->
@@ -1644,20 +1751,17 @@ function openEditTask(id) {
 
   document.getElementById("mt-notes").value = state[id]?.note || t.detail || "";
 
-  // Area / section
+  // Area / section — always shown, using overrides if present
   const areaCol    = document.getElementById("mt-area").closest(".modal-field-col");
   const sectionCol = document.getElementById("mt-section").closest(".modal-field-col");
-  if (isDynamic) {
-    areaCol.style.display = "";
-    sectionCol.style.display = "";
-    rebuildAreaSelect(t.area);
-    populateSections();
-    document.getElementById("mt-area").value    = t.area;
-    document.getElementById("mt-section").value = t.section;
-  } else {
-    areaCol.style.display    = "none";
-    sectionCol.style.display = "none";
-  }
+  areaCol.style.display    = "";
+  sectionCol.style.display = "";
+  const effectiveArea    = state[id]?.areaOverride    || t.area;
+  const effectiveSection = state[id]?.sectionOverride || t.section;
+  rebuildAreaSelect(effectiveArea);
+  populateSections();
+  document.getElementById("mt-area").value    = effectiveArea;
+  document.getElementById("mt-section").value = effectiveSection;
 
   // Due date
   modalDueDate = state[id]?.due || null;
@@ -1684,20 +1788,26 @@ function saveEditTask() {
   const t  = allTasks().find(t => t.id === id);
   if (!t) { closeAddTask(); return; }
 
-  // Update dynamic task fields
+  const newArea    = document.getElementById("mt-area").value;
+  const newSection = document.getElementById("mt-section").value;
+  const newNotes   = document.getElementById("mt-notes").value.trim();
+
   if (t._dynamic) {
     const idx = dynamicTasks.findIndex(d => d.id === id);
     if (idx > -1) {
       dynamicTasks[idx].title   = document.getElementById("mt-title").value.trim() || dynamicTasks[idx].title;
-      dynamicTasks[idx].detail  = document.getElementById("mt-notes").value.trim();
-      dynamicTasks[idx].area    = document.getElementById("mt-area").value;
-      dynamicTasks[idx].section = document.getElementById("mt-section").value;
+      dynamicTasks[idx].detail  = newNotes;
+      dynamicTasks[idx].area    = newArea;
+      dynamicTasks[idx].section = newSection;
       saveDynamicTasks();
     }
   } else {
-    // Static task: save notes to state
-    const noteVal = document.getElementById("mt-notes").value.trim();
-    state[id] = { ...(state[id] || {}), note: noteVal };
+    // Static task: store overrides + notes in state
+    state[id] = { ...(state[id] || {}), note: newNotes };
+    if (newArea    !== t.area)    state[id].areaOverride    = newArea;
+    else                          delete state[id].areaOverride;
+    if (newSection !== t.section) state[id].sectionOverride = newSection;
+    else                          delete state[id].sectionOverride;
   }
 
   // Due date
@@ -2114,19 +2224,24 @@ function render() {
   const all       = allTasks();
 
   const todayStr = new Date().toLocaleDateString("en-CA");
+  // Resolve effective area/section (may be overridden in state)
+  const tArea    = t => state[t.id]?.areaOverride    || t.area;
+  const tSection = t => state[t.id]?.sectionOverride || t.section;
+
   const visible = all.filter(t => {
     if (state[t.id]?.completed) return false;
     if (currentFilter === "today")  return !!state[t.id]?.today || state[t.id]?.due === todayStr;
-    if (currentFilter === "inbox")  return t.area === "inbox";
-    if (currentFilter === "all")    return t.area !== "inbox";
-    return t.area === currentFilter;
+    if (currentFilter === "inbox")  return tArea(t) === "inbox";
+    if (currentFilter === "all")    return tArea(t) !== "inbox";
+    return tArea(t) === currentFilter;
   });
 
   // Group by section
   const secMap = {};
   visible.forEach(t => {
-    const k = t.area + "|" + t.section;
-    if (!secMap[k]) secMap[k] = { area: t.area, name: t.section, tasks: [] };
+    const a = tArea(t); const s = tSection(t);
+    const k = a + "|" + s;
+    if (!secMap[k]) secMap[k] = { area: a, name: s, tasks: [] };
     secMap[k].tasks.push(t);
   });
 
@@ -2264,7 +2379,89 @@ document.getElementById("mt-title").addEventListener("input", function() {
   document.getElementById("mt-save").disabled = !this.value.trim();
 });
 
-// ── Due dates & When picker ───────────────────────────────────────────────
+// ── FAB context menu ─────────────────────────────────────────────────────
+function toggleFabMenu() {
+  const m = document.getElementById("fab-menu");
+  m.classList.toggle("open");
+}
+function closeFabMenu() {
+  document.getElementById("fab-menu").classList.remove("open");
+}
+document.addEventListener("click", e => {
+  const menu = document.getElementById("fab-menu");
+  const fab  = document.getElementById("main-fab");
+  if (menu && fab && !menu.contains(e.target) && !fab.contains(e.target)) {
+    menu.classList.remove("open");
+  }
+});
+
+// ── New Section / Area quick modals ──────────────────────────────────────
+function openNewSectionModal() {
+  // Populate area dropdown
+  const sel = document.getElementById("qs-area");
+  const areas = [
+    { id:"shop", label:"Broadway Beer Wine" },
+    { id:"design", label:"Design" },
+    { id:"personal", label:"Personal" },
+    ...customAreas.map(a => ({ id: a.id, label: a.label }))
+  ];
+  sel.innerHTML = areas.map(a => `<option value="${a.id}">${a.label}</option>`).join("");
+  // Pre-select current area if applicable
+  if (["shop","design","personal"].includes(currentFilter)) sel.value = currentFilter;
+  document.getElementById("qs-name").value = "";
+  document.getElementById("new-section-modal").classList.add("open");
+  setTimeout(() => document.getElementById("qs-name").focus(), 50);
+}
+function closeNewSectionModal() {
+  document.getElementById("new-section-modal").classList.remove("open");
+}
+function confirmQuickSection() {
+  const name = document.getElementById("qs-name").value.trim();
+  const area = document.getElementById("qs-area").value;
+  if (!name) return;
+  if (!customSections[area]) customSections[area] = [];
+  if (!customSections[area].includes(name)) customSections[area].push(name);
+  saveCustomMeta();
+  closeNewSectionModal();
+  // Add sidebar nav item if needed (re-render sidebar counts)
+  render();
+}
+
+function openNewAreaModal() {
+  document.getElementById("qa-name").value = "";
+  document.getElementById("new-area-modal").classList.add("open");
+  setTimeout(() => document.getElementById("qa-name").focus(), 50);
+}
+function closeNewAreaModal() {
+  document.getElementById("new-area-modal").classList.remove("open");
+}
+function confirmQuickArea() {
+  const name = document.getElementById("qa-name").value.trim();
+  if (!name) return;
+  const id = "area-" + Date.now();
+  customAreas.push({ id, label: name });
+  saveCustomMeta();
+  closeNewAreaModal();
+  // Rebuild sidebar
+  rebuildSidebarAreas();
+  render();
+}
+
+function rebuildSidebarAreas() {
+  // Custom areas appear in the sidebar dynamically
+  // We just trigger a full re-render which handles counts
+  // The static area items are in HTML; custom ones need to be injected
+  const nav = document.getElementById("custom-areas-nav");
+  if (!nav) return;
+  nav.innerHTML = customAreas.map(a => `
+    <button class="nav-item" onclick="setFilter('${a.id}',this)">
+      <span class="area-dot-nav" style="background:var(--label4)"></span>
+      <span class="nav-label">${a.label}</span>
+      <span class="nav-count" id="nc-${a.id}"></span>
+    </button>`).join("");
+}
+
+// ── Due dates & When picker ─────────────────────────────────────────────
 let modalDueDate = null;
 let calYear  = new Date().getFullYear();
 let calMonth = new Date().getMonth(); // 0-indexed
@@ -2533,6 +2730,7 @@ function saveToken() {
 
 loadState();
 loadCustomMeta();
+rebuildSidebarAreas();
 render();
 // Pull latest from Gist on load
 setTimeout(pullFromGist, 300);
