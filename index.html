@@ -3154,6 +3154,11 @@ function openSearch() {
   setTimeout(() => document.getElementById("search-input").focus(), 80);
 }
 
+function searchToggleTask(id, q) {
+  toggleTask(id);
+  setTimeout(() => doSearch(q), 50);
+}
+
 function closeSearch() {
   document.getElementById("search-bar").classList.remove("visible");
   document.getElementById("search-input").value = "";
@@ -3208,12 +3213,17 @@ function doSearch(q) {
     return;
   }
 
+  const lastQ = q;
   document.getElementById("main-tasks").innerHTML = results.map(t => {
     const areaName = AREA_NAMES[tA(t)] || customAreas.find(a=>a.id===tA(t))?.label || tA(t);
     const context  = `${areaName} › ${tS(t)}`;
-    return `<div class="search-result" onclick="openEditTask('${t.id}')">
+    return `<div class="search-result">
+      <div class="check-wrap" onclick="searchToggleTask('${t.id}','${lastQ}')">
+        <input type="checkbox" class="task-check">
+        <div class="check-circle">${checkSVG}</div>
+      </div>
       ${priorityDotHTML(t)}
-      <div class="search-result-body">
+      <div class="search-result-body" onclick="openEditTask('${t.id}')">
         <div class="search-result-title">${highlight(t.title)}</div>
         <div class="search-result-context">${context}</div>
       </div>
