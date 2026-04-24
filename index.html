@@ -895,24 +895,14 @@
   .mobile-back-btn { display: none; }
 
   @media (max-width: 640px) {
-    /* Lock html/body so iOS keyboard resize can't reflow the app shell */
-    html, body {
-      position: fixed;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-    }
-
     body { padding: 0; background: var(--sidebar-bg); }
 
     .app {
       max-width: 100%;
-      /* Use fixed + inset:0 so the iOS keyboard can't shrink us */
-      position: fixed;
-      inset: 0;
-      height: 100%;
+      height: 100vh;
       border-radius: 0;
       box-shadow: none;
+      position: relative;
       overflow: hidden;
     }
 
@@ -985,15 +975,7 @@
     }
 
     .task-content { padding: 8px 16px 100px; }
-    .notes-view {
-      padding: 16px 16px 100px;
-      position: absolute; inset: 0;
-      width: 100%; overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      background: var(--main-bg);
-    }
-    .notes-view textarea { min-height: 60vh; }
-    .fab { bottom: 28px; right: 20px; z-index: 100; }
+.fab { bottom: 28px; right: 20px; z-index: 100; }
     .fab-menu { bottom: 88px; right: 20px; }
 
     /* Back button */
@@ -1126,18 +1108,6 @@
         <span class="nav-label">Logbook</span>
         <span class="nav-count" id="nc-logbook"></span>
       </button>
-      <!-- Notes -->
-      <button class="nav-item" onclick="setFilter('notes',this)">
-        <span class="nav-icon">
-          <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="2.5" y="1.5" width="11" height="13" rx="1.5" stroke="#8E8E93" stroke-width="1.4"/>
-            <line x1="5" y1="5.5" x2="11" y2="5.5" stroke="#8E8E93" stroke-width="1.2" stroke-linecap="round"/>
-            <line x1="5" y1="8" x2="11" y2="8" stroke="#8E8E93" stroke-width="1.2" stroke-linecap="round"/>
-            <line x1="5" y1="10.5" x2="8.5" y2="10.5" stroke="#8E8E93" stroke-width="1.2" stroke-linecap="round"/>
-          </svg>
-        </span>
-        <span class="nav-label">Notes</span>
-      </button>
     </nav>
   </aside>
 
@@ -1169,12 +1139,6 @@
       <div id="logbook-main"></div>
     </div>
 
-    <!-- Notes view -->
-    <div class="notes-view" id="notes-panel" style="display:none">
-      <textarea id="notes-textarea"
-        placeholder="Freeform notes — jot anything here. Saves automatically."
-        oninput="saveNotesPad(this.value)"></textarea>
-    </div>
 
   </main>
 </div>
@@ -1957,9 +1921,8 @@ function setFilter(f, btn) {
   document.getElementById('view-title').textContent = VIEW_TITLES[f] || f;
 
   // Show/hide panels
-  const panels = { 'task-content': false, 'logbook-panel': false, 'notes-panel': false, 'upcoming-panel': false };
-  if      (f === 'notes')    panels['notes-panel']    = true;
-  else if (f === 'logbook')  panels['logbook-panel']  = true;
+  const panels = { 'task-content': false, 'logbook-panel': false, 'upcoming-panel': false };
+  if      (f === 'logbook')  panels['logbook-panel']  = true;
   else if (f === 'upcoming') panels['upcoming-panel'] = true;
   else                       panels['task-content']   = true;
 
@@ -1967,11 +1930,7 @@ function setFilter(f, btn) {
     document.getElementById(id).style.display = show ? '' : 'none';
   });
 
-  if (f === 'notes') {
-    const ta = document.getElementById('notes-textarea');
-    ta.value = localStorage.getItem('notes-pad') || '';
-    ta.focus();
-  } else if (f === 'logbook') {
+  if (f === 'logbook') {
     renderLogbook();
   } else if (f === 'upcoming') {
     renderUpcoming();
@@ -1980,9 +1939,6 @@ function setFilter(f, btn) {
   }
 }
 
-function saveNotesPad(val) {
-  localStorage.setItem('notes-pad', val);
-}
 
 function toggleSection(cardId) {
   document.getElementById(cardId).classList.toggle("collapsed");
