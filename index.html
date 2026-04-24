@@ -1783,9 +1783,28 @@ function openAddTask() {
   } else {
     document.getElementById("mt-area").closest(".modal-field-col").style.display = "";
     document.getElementById("mt-section").closest(".modal-field-col").style.display = "";
-    const preferArea = ["shop","design","personal"].includes(currentFilter) ? currentFilter : "shop";
+
+    // Pre-populate from current context
+    let preferArea    = "shop";
+    let preferSection = null;
+    if (currentFilter === "__sec__" && currentSectionCtx) {
+      preferArea    = currentSectionCtx.area;
+      preferSection = currentSectionCtx.name;
+    } else if (isAreaFilter(currentFilter)) {
+      preferArea = currentFilter;
+    } else if (["shop","design","personal"].includes(currentFilter)) {
+      preferArea = currentFilter;
+    }
+
     rebuildAreaSelect(preferArea);
     populateSections();
+    if (preferSection) {
+      const sec = document.getElementById("mt-section");
+      // Set if option exists, otherwise leave first option selected
+      if ([...sec.options].some(o => o.value === preferSection)) {
+        sec.value = preferSection;
+      }
+    }
   }
 
   modal.classList.add("open");
