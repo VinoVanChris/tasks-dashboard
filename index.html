@@ -1,0 +1,1858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tasks</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23007AFF'/%3E%3Cpolygon points='19,4 11,18 16,18 13,28 21,14 16,14' fill='white'/%3E%3C/svg%3E">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --sidebar-bg:     #EFEFF4;
+    --sidebar-w:      224px;
+    --main-bg:        #FFFFFF;
+    --label:          #1C1C1E;
+    --label2:         #48484A;
+    --label3:         #8E8E93;
+    --label4:         #C7C7CC;
+    --sep:            rgba(0,0,0,0.09);
+    --sep2:           rgba(0,0,0,0.05);
+    --blue:           #007AFF;
+    --blue-light:     rgba(0,122,255,0.10);
+    --green:          #34C759;
+    --green-light:    rgba(52,199,89,0.10);
+    --orange:         #FF9500;
+    --orange-light:   rgba(255,149,0,0.09);
+    --red:            #FF3B30;
+    --red-light:      rgba(255,59,48,0.08);
+    --purple:         #AF52DE;
+    --purple-light:   rgba(175,82,222,0.10);
+  }
+
+  html, body { height: 100%; -webkit-font-smoothing: antialiased; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    background: #D8D8E0;
+    color: var(--label);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 28px 20px 40px;
+  }
+
+  /* ── App shell ───────────────────────────────────────────────────────── */
+  .app {
+    display: flex;
+    width: 100%;
+    max-width: 920px;
+    height: calc(100vh - 68px);
+    min-height: 500px;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.16), 0 2px 8px rgba(0,0,0,0.10);
+  }
+
+  /* ── Sidebar ─────────────────────────────────────────────────────────── */
+  .sidebar {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-bottom: 16px;
+  }
+
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 22px 16px 14px;
+  }
+
+  .app-icon-wrap {
+    width: 26px; height: 26px;
+    background: var(--blue);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .app-icon-wrap svg { width: 13px; height: 13px; }
+
+  .app-name {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: var(--label);
+  }
+
+  .sidebar-nav { padding: 1px 8px; }
+
+  .sidebar-section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--label3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 14px 18px 4px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+    font-family: inherit;
+    transition: background 0.1s;
+    user-select: none;
+    color: var(--label2);
+  }
+
+  .nav-item:hover:not(.active) { background: rgba(0,0,0,0.04); }
+
+  .nav-item.active {
+    background: #FFFFFF;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.10), 0 0.5px 1px rgba(0,0,0,0.06);
+    color: var(--label);
+  }
+
+  .nav-icon {
+    width: 16px; height: 16px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .nav-icon svg { width: 15px; height: 15px; }
+
+  .nav-label {
+    flex: 1;
+    font-size: 13.5px;
+    font-weight: 500;
+    letter-spacing: -0.1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nav-count {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--label3);
+    flex-shrink: 0;
+    min-width: 14px;
+    text-align: right;
+  }
+
+  .area-dot-nav {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .adn-shop     { background: var(--blue); }
+  .adn-design   { background: var(--purple); }
+  .adn-personal { background: var(--orange); }
+
+  .sidebar-spacer { flex: 1; min-height: 16px; }
+
+  .sidebar-divider {
+    height: 0.5px;
+    background: var(--sep);
+    margin: 6px 14px;
+  }
+
+  /* ── Main panel ──────────────────────────────────────────────────────── */
+  .main {
+    flex: 1;
+    background: var(--main-bg);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .main-header {
+    padding: 22px 24px 12px;
+    flex-shrink: 0;
+    border-bottom: 0.5px solid var(--sep);
+  }
+
+  .view-title {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.6px;
+    color: var(--label);
+    line-height: 1.1;
+  }
+
+  .view-subtitle {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--label2);
+    margin-top: 4px;
+  }
+
+  .task-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 24px 80px;
+  }
+
+  /* ── Area heading (All view) ─────────────────────────────────────────── */
+  .area-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 28px;
+    margin-bottom: 6px;
+  }
+  .area-title-text {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    color: var(--label);
+    white-space: nowrap;
+  }
+  .area-title-rule { flex: 1; height: 1.5px; background: var(--sep); }
+
+  /* ── Section groups ──────────────────────────────────────────────────── */
+  .section-group {
+    margin-top: 8px;
+    padding-bottom: 16px;
+    border-bottom: 1.5px solid var(--sep);
+  }
+  .section-group:last-of-type { border-bottom: none; }
+  .section-group:first-of-type { margin-top: 4px; }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 2px 6px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .section-header:hover .section-name { color: var(--blue); }
+
+  .section-name {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: var(--label2);
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    transition: color 0.1s;
+  }
+
+  .section-right { display: flex; align-items: center; gap: 8px; }
+
+  .section-open-count { font-size: 12px; color: var(--label4); }
+
+  .section-chevron {
+    width: 13px; height: 13px;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.18s;
+  }
+  .section-chevron svg {
+    width: 8px; height: 8px;
+    stroke: var(--label3); stroke-width: 2;
+    fill: none; stroke-linecap: round; stroke-linejoin: round;
+  }
+
+  .section-group.collapsed .section-chevron { transform: rotate(-90deg); }
+  .section-group.collapsed .section-tasks   { display: none; }
+
+  .section-tasks { padding: 2px 0; }
+
+  /* ── Task rows ───────────────────────────────────────────────────────── */
+  .task-row {
+    display: flex;
+    align-items: flex-start;
+    padding: 9px 6px;
+    gap: 11px;
+    border-bottom: 0.5px solid var(--sep2);
+    border-radius: 6px;
+    margin: 0 -6px;
+    transition: background 0.1s;
+    position: relative;
+  }
+  .task-row:last-child { border-bottom: none; }
+  .task-row:hover { background: rgba(0,0,0,0.025); }
+  .task-row.is-today   { background: var(--orange-light); }
+  .task-row.is-today:hover { background: rgba(255,149,0,0.13); }
+  .task-row.is-overdue { background: var(--red-light); }
+  .task-row.is-done    { opacity: 0.45; }
+
+  /* ── Checkbox ────────────────────────────────────────────────────────── */
+  .check-wrap {
+    position: relative;
+    width: 20px; height: 20px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .task-check {
+    position: absolute; inset: 0;
+    opacity: 0; cursor: pointer;
+    width: 100%; height: 100%; z-index: 2;
+  }
+  .check-circle {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    border: 1.5px solid var(--label4);
+    background: transparent;
+    transition: border-color 0.12s, background 0.15s;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+  }
+  .check-circle svg {
+    width: 10px; height: 10px;
+    stroke: white; stroke-width: 2.5;
+    fill: none; stroke-linecap: round; stroke-linejoin: round;
+    opacity: 0; transition: opacity 0.12s;
+  }
+  .task-check:hover ~ .check-circle { border-color: var(--blue); }
+  .task-check:checked ~ .check-circle { background: var(--green); border-color: var(--green); }
+  .task-check:checked ~ .check-circle svg { opacity: 1; }
+
+  /* ── Task body ───────────────────────────────────────────────────────── */
+  .task-body { flex: 1; min-width: 0; }
+
+  .task-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--label);
+    line-height: 1.35;
+    letter-spacing: -0.2px;
+  }
+  .task-row.is-done .task-title { text-decoration: line-through; color: var(--label3); font-weight: 400; }
+
+  .task-detail {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--label2);
+    margin-top: 3px;
+    line-height: 1.4;
+    letter-spacing: -0.1px;
+  }
+
+  .task-meta {
+    display: flex; align-items: center;
+    gap: 5px; flex-wrap: wrap; margin-top: 5px;
+  }
+
+  .badge {
+    font-size: 10.5px; font-weight: 500;
+    padding: 2px 7px; border-radius: 100px;
+  }
+  .badge-blocked  { background: var(--orange-light); color: var(--orange); }
+  .badge-overdue  { background: var(--red-light);    color: var(--red); }
+  .badge-progress { background: var(--blue-light);   color: var(--blue); }
+  .badge-ongoing  { background: var(--green-light);  color: var(--green); }
+
+  .done-stamp {
+    font-size: 11.5px; color: var(--green);
+    margin-top: 3px; display: flex; align-items: center; gap: 4px;
+  }
+
+  /* ── Subtasks ────────────────────────────────────────────────────────── */
+  .subtask-toggle {
+    display: flex; align-items: center; gap: 6px;
+    margin-top: 5px; cursor: pointer; width: fit-content;
+  }
+  .subtask-pip {
+    font-size: 11px; font-weight: 500;
+    padding: 1px 7px; border-radius: 100px;
+    background: var(--blue-light); color: var(--blue);
+  }
+  .subtask-pip.all-done { background: var(--green-light); color: var(--green); }
+  .subtask-chevron {
+    width: 13px; height: 13px;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.18s;
+  }
+  .subtask-chevron svg {
+    width: 8px; height: 8px;
+    stroke: var(--label3); stroke-width: 2;
+    fill: none; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .subtask-chevron.open { transform: rotate(180deg); }
+
+  .subtask-rows { display: none; margin-top: 6px; padding-left: 2px; }
+  .subtask-rows.expanded { display: block; }
+
+  .subtask-row { display: flex; align-items: flex-start; gap: 8px; padding: 5px 0; }
+  .subtask-row:not(:last-child) { border-bottom: 0.5px solid var(--sep2); }
+
+  .sub-check-wrap { position: relative; width: 15px; height: 15px; flex-shrink: 0; margin-top: 1px; }
+  .sub-check-wrap .task-check { width: 100%; height: 100%; }
+  .sub-check-circle {
+    position: absolute; inset: 0;
+    border-radius: 50%; border: 1.5px solid var(--label4);
+    background: transparent;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none; transition: all 0.12s;
+  }
+  .sub-check-circle svg {
+    width: 7px; height: 7px;
+    stroke: white; stroke-width: 2.5;
+    fill: none; stroke-linecap: round; stroke-linejoin: round;
+    opacity: 0; transition: opacity 0.12s;
+  }
+  .sub-check-wrap .task-check:hover ~ .sub-check-circle { border-color: var(--blue); }
+  .sub-check-wrap .task-check:checked ~ .sub-check-circle { background: var(--green); border-color: var(--green); }
+  .sub-check-wrap .task-check:checked ~ .sub-check-circle svg { opacity: 1; }
+
+  .subtask-title { font-size: 13.5px; font-weight: 400; color: var(--label2); line-height: 1.35; flex: 1; }
+  .subtask-row.is-done .subtask-title { text-decoration: line-through; color: var(--label3); }
+
+  /* ── Task action buttons (hover-reveal) ──────────────────────────────── */
+  .task-actions {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 2px; flex-shrink: 0;
+    opacity: 0; transition: opacity 0.15s;
+  }
+  .task-row:hover .task-actions { opacity: 1; }
+
+  .today-btn, .note-btn, .add-sub-btn {
+    width: 22px; height: 22px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; border: none; background: none; padding: 0;
+    transition: opacity 0.12s;
+  }
+  .today-btn svg { width: 14px; height: 14px; }
+  .today-btn.is-today svg    { fill: var(--orange); stroke: var(--orange); }
+  .today-btn:not(.is-today) svg { fill: none; stroke: var(--label4); }
+  .today-btn.is-today { opacity: 1 !important; }
+
+  .note-btn svg, .add-sub-btn svg {
+    width: 13px; height: 13px; fill: none; stroke: var(--label4);
+    stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .note-btn.has-note svg, .note-btn.is-open svg { stroke: var(--blue); }
+  .note-btn.has-note, .note-btn.is-open { opacity: 1 !important; }
+  .add-sub-btn svg { stroke-width: 2.2; }
+  .add-sub-btn.is-open { opacity: 1 !important; }
+
+  /* Make sure flagged tasks always show their flag even when not hovered */
+  .task-row.is-today .task-actions { opacity: 1; }
+
+  /* Note display + editor */
+  .task-note-display {
+    font-size: 12px; color: var(--blue);
+    margin-top: 3px; font-style: italic; line-height: 1.4;
+  }
+  .note-area { margin-top: 6px; }
+  .note-textarea {
+    width: 100%; font-size: 13px; font-family: inherit;
+    color: var(--label); background: rgba(0,0,0,0.03);
+    border: 1px solid rgba(0,0,0,0.1); border-radius: 6px;
+    padding: 7px 9px; resize: vertical; min-height: 60px;
+    outline: none; line-height: 1.45;
+    transition: border-color 0.12s;
+  }
+  .note-textarea:focus { border-color: var(--blue); background: white; }
+
+  /* Dynamic subtask input */
+  .new-sub-row { display: flex; align-items: center; gap: 7px; padding: 4px 0; }
+  .new-sub-input {
+    flex: 1; font-size: 13px; font-family: inherit; color: var(--label);
+    background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 6px; padding: 4px 8px; outline: none;
+    transition: border-color 0.12s;
+  }
+  .new-sub-input:focus { border-color: var(--blue); background: white; }
+  .new-sub-hint { font-size: 11px; color: var(--label3); white-space: nowrap; }
+  .dyn-sub-del {
+    cursor: pointer; color: var(--label4); font-size: 14px;
+    background: none; border: none; padding: 0 2px;
+    opacity: 0.5; line-height: 1; flex-shrink: 0;
+    transition: opacity 0.1s, color 0.1s;
+  }
+  .dyn-sub-del:hover { opacity: 1; color: var(--red); }
+
+  /* ── Completed section ───────────────────────────────────────────────── */
+  .done-group { margin-top: 24px; }
+  .done-group-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 2px;
+    border-bottom: 0.5px solid var(--sep);
+  }
+  .done-group-label {
+    font-size: 12.5px; font-weight: 600;
+    color: var(--label3); text-transform: uppercase;
+    letter-spacing: 0.1px;
+  }
+  .done-count-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--green); color: white;
+    border-radius: 100px; font-size: 10.5px; font-weight: 600;
+    min-width: 18px; height: 16px; padding: 0 5px;
+  }
+
+  /* ── Notes view ──────────────────────────────────────────────────────── */
+  .notes-view {
+    flex: 1; overflow-y: auto;
+    padding: 20px 32px 52px;
+  }
+  .notes-view textarea {
+    width: 100%; min-height: calc(100vh - 200px);
+    font-family: inherit; font-size: 15px; line-height: 1.7;
+    color: var(--label); background: transparent;
+    border: none; outline: none; resize: none;
+  }
+
+  /* ── Floating action button ──────────────────────────────────────────── */
+  .main { position: relative; }
+
+  .fab {
+    position: absolute;
+    bottom: 28px; right: 28px;
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: var(--blue);
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(0,122,255,0.40), 0 1px 4px rgba(0,0,0,0.12);
+    transition: transform 0.14s, box-shadow 0.14s;
+    z-index: 50;
+  }
+  .fab:hover  { transform: scale(1.07); box-shadow: 0 6px 20px rgba(0,122,255,0.50); }
+  .fab:active { transform: scale(0.95); }
+  .fab svg { width: 20px; height: 20px; stroke: white; stroke-width: 2.5; fill: none; stroke-linecap: round; }
+
+  /* ── Inbox ───────────────────────────────────────────────────────────── */
+  .inbox-empty {
+    text-align: center; color: var(--label3);
+    font-size: 14px; padding: 60px 0;
+  }
+  .inbox-empty-icon { font-size: 36px; margin-bottom: 12px; }
+
+  .move-btn {
+    font-family: inherit; font-size: 11.5px; font-weight: 500;
+    color: var(--blue); background: var(--blue-light);
+    border: none; border-radius: 6px;
+    padding: 3px 9px; cursor: pointer;
+    flex-shrink: 0; white-space: nowrap;
+    transition: background 0.1s;
+  }
+  .move-btn:hover { background: rgba(0,122,255,0.18); }
+
+  .move-row {
+    display: none; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap;
+  }
+  .move-row.open { display: flex; }
+
+  .move-select {
+    font-family: inherit; font-size: 12px;
+    color: var(--label2); background: rgba(0,0,0,0.04);
+    border: 1px solid rgba(0,0,0,0.08); border-radius: 7px;
+    padding: 4px 8px; outline: none; cursor: pointer; max-width: 160px;
+  }
+  .move-select:focus { border-color: var(--blue); }
+
+  .move-confirm-btn {
+    font-family: inherit; font-size: 12px; font-weight: 600;
+    color: white; background: var(--blue);
+    border: none; border-radius: 6px;
+    padding: 4px 10px; cursor: pointer;
+  }
+
+  /* ── Logbook ─────────────────────────────────────────────────────────── */
+  .logbook-date-header {
+    font-size: 12px; font-weight: 600;
+    color: var(--label3); text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 20px 0 6px;
+    border-bottom: 0.5px solid var(--sep);
+    margin-bottom: 0;
+  }
+  .logbook-date-header:first-child { padding-top: 8px; }
+
+  .logbook-empty {
+    text-align: center; color: var(--label3);
+    font-size: 14px; padding: 60px 0;
+  }
+
+  /* ── Modal overlay ───────────────────────────────────────────────────── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,0,0,0.28);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal-sheet {
+    background: #FFFFFF;
+    border-radius: 14px;
+    width: 480px;
+    max-width: calc(100vw - 40px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.18), 0 4px 12px rgba(0,0,0,0.10);
+    overflow: hidden;
+    animation: sheetIn 0.2s cubic-bezier(0.34,1.4,0.64,1);
+  }
+  @keyframes sheetIn {
+    from { opacity: 0; transform: scale(0.95) translateY(8px); }
+    to   { opacity: 1; transform: scale(1)    translateY(0); }
+  }
+
+  .modal-body { padding: 24px 24px 20px; }
+
+  .modal-title-input {
+    width: 100%; border: none; outline: none;
+    font-family: inherit; font-size: 18px; font-weight: 500;
+    color: var(--label); background: transparent;
+    letter-spacing: -0.3px; line-height: 1.3;
+  }
+  .modal-title-input::placeholder { color: var(--label4); }
+
+  .modal-divider { height: 0.5px; background: var(--sep); margin: 14px 0; }
+
+  .modal-notes-input {
+    width: 100%; border: none; outline: none;
+    font-family: inherit; font-size: 14px;
+    color: var(--label2); background: transparent;
+    resize: none; line-height: 1.5; min-height: 52px;
+  }
+  .modal-notes-input::placeholder { color: var(--label4); }
+
+  .modal-fields { display: flex; gap: 10px; margin-top: 16px; }
+
+  .modal-field-col { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .modal-field-col:last-child { flex: 1.5; }
+
+  .modal-field-row { display: flex; align-items: center; gap: 6px; }
+
+  .modal-select {
+    flex: 1; min-width: 0; font-family: inherit; font-size: 13px;
+    color: var(--label2); background: rgba(0,0,0,0.04);
+    border: 1px solid rgba(0,0,0,0.08); border-radius: 8px;
+    padding: 7px 10px; outline: none; cursor: pointer;
+  }
+  .modal-select:focus { border-color: var(--blue); background: white; }
+
+  .modal-add-pill {
+    flex-shrink: 0; width: 24px; height: 24px;
+    border-radius: 50%; border: 1.5px solid rgba(0,0,0,0.12);
+    background: transparent; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; line-height: 1; color: var(--label3);
+    transition: border-color 0.1s, color 0.1s, background 0.1s;
+    padding: 0;
+  }
+  .modal-add-pill:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+
+  .modal-new-row {
+    display: none; align-items: center; gap: 6px;
+  }
+  .modal-new-row.visible { display: flex; }
+
+  .modal-new-input {
+    flex: 1; font-family: inherit; font-size: 13px;
+    color: var(--label); background: white;
+    border: 1px solid var(--blue); border-radius: 8px;
+    padding: 5px 9px; outline: none;
+  }
+  .modal-new-confirm {
+    flex-shrink: 0; font-family: inherit; font-size: 12px; font-weight: 600;
+    color: white; background: var(--blue);
+    border: none; border-radius: 6px;
+    padding: 5px 10px; cursor: pointer;
+  }
+
+  .modal-footer {
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 8px; padding: 14px 24px;
+    border-top: 0.5px solid var(--sep);
+    background: rgba(0,0,0,0.015);
+  }
+
+  .modal-cancel-btn {
+    font-family: inherit; font-size: 14px; font-weight: 500;
+    color: var(--label3); background: transparent;
+    border: none; cursor: pointer; padding: 7px 14px;
+    border-radius: 8px; transition: background 0.1s;
+  }
+  .modal-cancel-btn:hover { background: rgba(0,0,0,0.05); color: var(--label2); }
+
+  .modal-save-btn {
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    color: white; background: var(--blue);
+    border: none; cursor: pointer; padding: 7px 18px;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,122,255,0.30);
+    transition: background 0.1s, transform 0.1s;
+  }
+  .modal-save-btn:hover { background: #0066DD; }
+  .modal-save-btn:active { transform: scale(0.97); }
+  .modal-save-btn:disabled { opacity: 0.4; cursor: default; }
+
+  /* ── Responsive ──────────────────────────────────────────────────────── */
+  @media (max-width: 640px) {
+    body { padding: 0; }
+    .app { max-width: 100%; height: 100vh; border-radius: 0; box-shadow: none; }
+    .sidebar { display: none; }
+    .main-header { padding: 18px 16px 12px; }
+    .task-content { padding: 8px 16px 80px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── Sidebar ──────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="app-icon-wrap">
+        <svg viewBox="0 0 32 32" fill="white" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="19,4 11,18 16,18 13,28 21,14 16,14"/>
+        </svg>
+      </div>
+      <span class="app-name">Tasks</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <!-- Inbox -->
+      <button class="nav-item" onclick="setFilter('inbox',this)">
+        <span class="nav-icon">
+          <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="1.5" y="9" width="13" height="5.5" rx="1.5" stroke="#007AFF" stroke-width="1.4"/>
+            <path d="M1.5 9 L5 5.5 H11 L14.5 9" stroke="#007AFF" stroke-width="1.4" stroke-linejoin="round" fill="none"/>
+            <line x1="5.5" y1="11.75" x2="10.5" y2="11.75" stroke="#007AFF" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="nav-label">Inbox</span>
+        <span class="nav-count" id="nc-inbox"></span>
+      </button>
+      <!-- Today -->
+      <button class="nav-item" onclick="setFilter('today',this)">
+        <span class="nav-icon">
+          <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="8" cy="8" r="3.5" fill="#FF9500"/>
+            <line x1="8" y1="1" x2="8" y2="2.5" stroke="#FF9500" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="8" y1="13.5" x2="8" y2="15" stroke="#FF9500" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="1" y1="8" x2="2.5" y2="8" stroke="#FF9500" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="13.5" y1="8" x2="15" y2="8" stroke="#FF9500" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="2.9" y1="2.9" x2="3.97" y2="3.97" stroke="#FF9500" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="12.03" y1="12.03" x2="13.1" y2="13.1" stroke="#FF9500" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="13.1" y1="2.9" x2="12.03" y2="3.97" stroke="#FF9500" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="3.97" y1="12.03" x2="2.9" y2="13.1" stroke="#FF9500" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="nav-label">Today</span>
+        <span class="nav-count" id="nc-today"></span>
+      </button>
+      <!-- All -->
+      <button class="nav-item active" onclick="setFilter('all',this)">
+        <span class="nav-icon">
+          <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="3" width="12" height="1.5" rx="0.75" fill="#8E8E93"/>
+            <rect x="2" y="7.25" width="12" height="1.5" rx="0.75" fill="#8E8E93"/>
+            <rect x="2" y="11.5" width="8" height="1.5" rx="0.75" fill="#8E8E93"/>
+          </svg>
+        </span>
+        <span class="nav-label">All Tasks</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-section-label">Areas</div>
+
+    <nav class="sidebar-nav">
+      <button class="nav-item" onclick="setFilter('shop',this)">
+        <span class="area-dot-nav adn-shop"></span>
+        <span class="nav-label">Broadway Beer Wine</span>
+        <span class="nav-count" id="nc-shop"></span>
+      </button>
+      <button class="nav-item" onclick="setFilter('design',this)">
+        <span class="area-dot-nav adn-design"></span>
+        <span class="nav-label">Design</span>
+        <span class="nav-count" id="nc-design"></span>
+      </button>
+      <button class="nav-item" onclick="setFilter('personal',this)">
+        <span class="area-dot-nav adn-personal"></span>
+        <span class="nav-label">Personal</span>
+        <span class="nav-count" id="nc-personal"></span>
+      </button>
+    </nav>
+
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-divider"></div>
+
+    <nav class="sidebar-nav">
+      <!-- Logbook -->
+      <button class="nav-item" onclick="setFilter('logbook',this)">
+        <span class="nav-icon">
+          <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="1.5" width="12" height="13" rx="1.5" stroke="#34C759" stroke-width="1.4"/>
+            <polyline points="5,8 7,10 11,6" stroke="#34C759" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="nav-label">Logbook</span>
+        <span class="nav-count" id="nc-logbook"></span>
+      </button>
+      <!-- Notes -->
+      <button class="nav-item" onclick="setFilter('notes',this)">
+        <span class="nav-icon">
+          <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2.5" y="1.5" width="11" height="13" rx="1.5" stroke="#8E8E93" stroke-width="1.4"/>
+            <line x1="5" y1="5.5" x2="11" y2="5.5" stroke="#8E8E93" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="5" y1="8" x2="11" y2="8" stroke="#8E8E93" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="5" y1="10.5" x2="8.5" y2="10.5" stroke="#8E8E93" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="nav-label">Notes</span>
+      </button>
+    </nav>
+  </aside>
+
+  <!-- ── Main ─────────────────────────────────────────────────────── -->
+  <main class="main">
+    <div class="main-header">
+      <div class="view-title" id="view-title">All Tasks</div>
+      <div class="view-subtitle" id="view-subtitle"></div>
+    </div>
+
+    <!-- Tasks view -->
+    <div class="task-content" id="task-content">
+      <div id="main-tasks"></div>
+      <div id="done-section"></div>
+    </div>
+
+    <!-- Logbook view -->
+    <div class="task-content" id="logbook-panel" style="display:none">
+      <div id="logbook-main"></div>
+    </div>
+
+    <!-- Notes view -->
+    <div class="notes-view" id="notes-panel" style="display:none">
+      <textarea id="notes-textarea"
+        placeholder="Freeform notes — jot anything here. Saves automatically."
+        oninput="saveNotesPad(this.value)"></textarea>
+    </div>
+
+    <!-- Floating + button -->
+    <button class="fab" onclick="openAddTask()" title="New task (⌘N)">
+      <svg viewBox="0 0 20 20"><line x1="10" y1="3" x2="10" y2="17"/><line x1="3" y1="10" x2="17" y2="10"/></svg>
+    </button>
+  </main>
+</div>
+
+<!-- ── Add Task Modal ────────────────────────────────────────────── -->
+<div class="modal-overlay" id="add-task-modal" onclick="handleOverlayClick(event)">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-label="New task">
+    <div class="modal-body">
+      <input class="modal-title-input" id="mt-title" type="text"
+        placeholder="New task"
+        onkeydown="handleModalKey(event)">
+      <div class="modal-divider"></div>
+      <textarea class="modal-notes-input" id="mt-notes"
+        placeholder="Notes"
+        rows="3"
+        onkeydown="handleModalKey(event)"></textarea>
+      <div class="modal-fields">
+        <!-- Area column -->
+        <div class="modal-field-col">
+          <div class="modal-field-row">
+            <select class="modal-select" id="mt-area" onchange="populateSections()"></select>
+            <button class="modal-add-pill" onclick="toggleNewArea()" title="New area">+</button>
+          </div>
+          <div class="modal-new-row" id="new-area-row">
+            <input class="modal-new-input" id="new-area-input" placeholder="Area name…"
+              onkeydown="if(event.key==='Enter')confirmNewArea();if(event.key==='Escape')toggleNewArea()">
+            <button class="modal-new-confirm" onclick="confirmNewArea()">Add</button>
+          </div>
+        </div>
+        <!-- Section column -->
+        <div class="modal-field-col">
+          <div class="modal-field-row">
+            <select class="modal-select" id="mt-section"></select>
+            <button class="modal-add-pill" onclick="toggleNewSection()" title="New section">+</button>
+          </div>
+          <div class="modal-new-row" id="new-section-row">
+            <input class="modal-new-input" id="new-section-input" placeholder="Section name…"
+              onkeydown="if(event.key==='Enter')confirmNewSection();if(event.key==='Escape')toggleNewSection()">
+            <button class="modal-new-confirm" onclick="confirmNewSection()">Add</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-cancel-btn" onclick="closeAddTask()">Cancel</button>
+      <button class="modal-save-btn" id="mt-save" onclick="saveNewTask()">Add Task</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TASKS = [
+  // ── BC Products / Ordering ──────────────────────────────────────────────────
+  { id:"ordering-backcountry-sk",  area:"shop", section:"BC Products / Ordering", title:"Backcountry Brewing",       detail:"Sh*tty Kitty",   tags:[], subtasks:["Contact rep","Confirm availability","Place order","Confirm delivery date"] },
+  { id:"ordering-backcountry-wm",  area:"shop", section:"BC Products / Ordering", title:"Backcountry Brewing",       detail:"Widowmaker",      tags:[], subtasks:["Contact rep","Confirm availability","Place order","Confirm delivery date"] },
+  { id:"ordering-tantalus",     area:"shop", section:"BC Products / Ordering", title:"Tantalus",                  detail:"Ordering",       tags:[], subtasks:["Contact rep","Confirm product + quantity","Place order","Confirm delivery date"] },
+  { id:"ordering-1",           area:"shop", section:"BC Products / Ordering", title:"Scout Vineyard",            detail:"Follow up on ordering",                            tags:[], subtasks:["Contact rep","Confirm product + quantity","Place order","Confirm delivery date"] },
+  { id:"ordering-teravista",   area:"shop", section:"BC Products / Ordering", title:"Teravista",                 detail:"Ordering",                                         tags:[], subtasks:["Contact rep","Confirm product + quantity","Place order","Confirm delivery date"] },
+  { id:"ordering-onemillroad", area:"shop", section:"BC Products / Ordering", title:"One Mill Road",             detail:"Ordering",                                         tags:[], subtasks:["Contact rep","Confirm product + quantity","Place order","Confirm delivery date"] },
+  { id:"ordering-roche",       area:"shop", section:"BC Products / Ordering", title:"Roche",                    detail:"Ordering",                                         tags:[], subtasks:["Contact rep","Confirm product + quantity","Place order","Confirm delivery date"] },
+  { id:"ordering-2",           area:"shop", section:"BC Products / Ordering", title:"A Sunday in August",        detail:"Supplier won't reply — escalate or drop?",         tags:[], subtasks:["Attempt one more contact","Decision: escalate or drop","If keeping: place order / If dropping: remove from buy list"] },
+  { id:"ordering-3",           area:"shop", section:"BC Products / Ordering", title:"Il Sauvage Brewery",        detail:"Ordering",                                         tags:[], subtasks:["Contact rep","Confirm product + quantity","Place order","Confirm delivery date"] },
+  { id:"ordering-faculty",     area:"shop", section:"BC Products / Ordering", title:"Faculty Brewing",           detail:"240 London Fog",                                   tags:[], subtasks:["Contact rep","Confirm 240 London Fog availability","Place order","Confirm delivery date"] },
+  { id:"ordering-changing",    area:"shop", section:"BC Products / Ordering", title:"Changing Colours Brewery",  detail:"Astro Zombies",                                    tags:[], subtasks:["Contact rep","Confirm Astro Zombies availability","Place order","Confirm delivery date"] },
+  { id:"ordering-mariner",     area:"shop", section:"BC Products / Ordering", title:"Mariner Brewing",           detail:"Mundy Mango Ale",                                  tags:[], subtasks:["Contact rep","Confirm Mundy Mango Ale availability","Place order","Confirm delivery date"] },
+  { id:"ordering-4",           area:"shop", section:"BC Products / Ordering", title:"Le Vieux Pin / LaStella",   detail:"Ordering",                                         tags:[], subtasks:["Contact rep","Confirm product + quantity","Place order","Confirm delivery date"] },
+
+  // ── Marketing ───────────────────────────────────────────────────────────────
+  { id:"mktg-1",  area:"shop", section:"Marketing", title:"Easter email sendout", detail:"Send to Mailchimp list (~1500 subscribers)", tags:[], subtasks:[
+    "Decide on featured products / offer",
+    "Write subject line + email copy",
+    "Build email in Mailchimp",
+    "Send test + review",
+    "Schedule / send to full list"
+  ]},
+  { id:"mktg-2",  area:"shop", section:"Marketing", title:"Instagram post", detail:"Get photo + text ready", tags:[], subtasks:[
+    "Select product or story to feature",
+    "Source or shoot photo",
+    "Write caption + hashtags",
+    "Post at optimal time"
+  ]},
+  { id:"mktg-bizcards", area:"shop", section:"Marketing", title:"Business cards", detail:"Call JukeBox", tags:[], subtasks:[
+    "Confirm current design or decide on refresh",
+    "Call JukeBox — get quote + turnaround",
+    "Provide artwork / approve proof",
+    "Place order",
+    "Pick up / receive cards"
+  ]},
+  { id:"mktg-postcard", area:"shop", section:"Marketing", title:"$250 Gift Card postcard", detail:"Chris/Rosina — Counter card: purchase + loyalty + email entry · design started, needs finalization + print run", tags:["in-progress"], subtasks:[
+    "Finalise design — copy, layout, colours",
+    "Confirm qualifying purchase threshold amount",
+    "Get print specs from printer (size, bleed, colour profile)",
+    "Set up bleed + crop marks for print",
+    "Export print-ready file (PDF at correct specs)",
+    "Internal proof — Chris/Rosina sign off",
+    "Source printer + get quotes",
+    "Place print order",
+    "Receive + inspect printed postcards",
+    "Deploy to counter in-store"
+  ]},
+  { id:"mktg-greek", area:"shop", section:"Marketing", title:"Greek Days promotion", detail:"General store promo · $250 gift card draw at end of Greek Days · promote in-store, email, Instagram", tags:[], subtasks:[
+    "Set qualifying purchase threshold",
+    "Design in-store signage + draw box",
+    "Select featured products for the promo period",
+    "Draft Mailchimp email campaign",
+    "Create Instagram content (posts + stories)",
+    "Set up draw entry system",
+    "Day-of staffing + execution plan",
+    "Draw the winner at end of Greek Days"
+  ]},
+
+  // ── Website / Astro Build ───────────────────────────────────────────────────
+  { id:"web-1", area:"shop", section:"Website / Astro Build", title:"Hardware approval (MacBook)", detail:"Chris — Needed for Astro build", tags:["blocked"] },
+  { id:"web-2", area:"shop", section:"Website / Astro Build", title:"Barnet API integration",      detail:"Jason/Chris — Feed product data to front end. Blocked on hardware.", tags:["blocked"] },
+  { id:"web-3", area:"shop", section:"Website / Astro Build", title:"Sitemap finalization",        detail:"Chris — Confirm all pages before build begins", tags:[], subtasks:[
+    "Home","Shop","Gifting","About","Events","Wine Club","Blog","Loyalty","Contact / Hours","Review + lock sitemap with David"
+  ]},
+  { id:"web-4", area:"shop", section:"Website / Astro Build", title:"Keyword research",            detail:"Chris — 100% SEO-driven blog planning", tags:[], subtasks:[
+    "List target pages needing keyword strategy",
+    "Research primary + secondary keywords per page",
+    "Check competitor keyword gaps",
+    "Prioritise by search volume + intent",
+    "Map keywords to content calendar"
+  ]},
+  { id:"web-5", area:"shop", section:"Website / Astro Build", title:"Payment gateway decision (KORT/Authorize.net)", detail:"David — Stalled since February", tags:["blocked"] },
+
+  // ── Skip the Dishes ─────────────────────────────────────────────────────────
+  { id:"skip-kyc", area:"shop", section:"Skip the Dishes", title:"KYC verification reply — Just Eat Takeaway", detail:"Reply to lily.tao@justeattakeaway.com · provide partner/manager full name, second email, cell, primary language", tags:[], subtasks:[
+    "Confirm which manager name + contact to submit (David or Chris?)",
+    "Reply to lily.tao@justeattakeaway.com with required details",
+    "CC Jason + David on reply"
+  ]},
+  { id:"skip-1", area:"shop", section:"Skip the Dishes", title:"Escalation email", detail:"Chris — Drafted in Gmail. Send to account managers + CC David.", tags:[], subtasks:[
+    "Open draft in Gmail",
+    "Final review of copy",
+    "Send to both account managers",
+    "CC David"
+  ]},
+  { id:"skip-2", area:"shop", section:"Skip the Dishes", title:"Follow-up with account reps", detail:"Chris — Two unresponsive reps, voided DocuSign from Dec 2025. After escalation sent.", tags:[] },
+  { id:"skip-3", area:"shop", section:"Skip the Dishes", title:"Go-live setup", detail:"Jason — After onboarding complete", tags:[], subtasks:[
+    "Confirm menu is live + accurate on platform",
+    "Set delivery radius + hours",
+    "Test order end-to-end",
+    "Confirm payment processing",
+    "Announce go-live to staff"
+  ]},
+
+  // ── Corporate Gifting ───────────────────────────────────────────────────────
+  { id:"gift-1", area:"shop", section:"Corporate Gifting", title:"Gift package SKU definition", detail:"Chris — Three tiers + pre-curated lineups", tags:[], subtasks:[
+    "Define three price tiers (entry / mid / premium)",
+    "Curate product lineup for each tier",
+    "Set pricing per tier",
+    "Name each package",
+    "Document full spec for Jason"
+  ]},
+  { id:"gift-2", area:"shop", section:"Corporate Gifting", title:"Gift package SKU creation in Barnet", detail:"Jason — After SKU definition", tags:[], subtasks:[
+    "Create SKU for each tier in Barnet",
+    "Attach correct component products",
+    "Set pricing + inventory tracking",
+    "Test SKU at POS",
+    "Confirm with Chris"
+  ]},
+  { id:"gift-3", area:"shop", section:"Corporate Gifting", title:"Product photography (gifting packages)", detail:"Chris/Rosina — Competitive differentiator", tags:[], subtasks:[
+    "Plan shots: packaging, lifestyle, detail",
+    "Source props + styling",
+    "Set up and shoot all three tiers",
+    "Edit + colour correct",
+    "Export for web + print use"
+  ]},
+
+  // ── Bottlecapps Interim ─────────────────────────────────────────────────────
+  { id:"bottle-1", area:"shop", section:"Bottlecapps Interim", title:"Brand color codes",              detail:"Chris — Submit to Daniel Turner",                               tags:[] },
+  { id:"bottle-2", area:"shop", section:"Bottlecapps Interim", title:"Banner images",                  detail:"Chris — Visual assets for app", tags:[], subtasks:[
+    "Confirm required banner sizes from Daniel Turner",
+    "Design banners (hero + promo)",
+    "Export at required dimensions",
+    "Send to Daniel Turner"
+  ]},
+  { id:"bottle-3", area:"shop", section:"Bottlecapps Interim", title:"Mailchimp list export",          detail:"Chris — ~1500 subscribers",                                    tags:["in-progress"] },
+  { id:"bottle-4", area:"shop", section:"Bottlecapps Interim", title:"Apple Developer delegation",     detail:"Chris — Delegate access to Daniel Turner", tags:[], subtasks:[
+    "Log into Apple Developer account",
+    "Navigate to Users & Access",
+    "Invite Daniel Turner with correct role",
+    "Confirm delegation accepted"
+  ]},
+  { id:"bottle-5", area:"shop", section:"Bottlecapps Interim", title:"Google Developer account registration", detail:"Chris — Required for Bottlecapps app launch", tags:[], subtasks:[
+    "Create Google Play Developer account",
+    "Pay one-time registration fee (USD $25)",
+    "Complete identity verification",
+    "Add Daniel Turner as admin"
+  ]},
+  { id:"bottle-6", area:"shop", section:"Bottlecapps Interim", title:"Funio .ca access",              detail:"Chris — Bottlecapps needs it for shop.broadwaybeerwine.ca",    tags:[] },
+
+  // ── Operations / Hiring ─────────────────────────────────────────────────────
+  { id:"ops-1", area:"shop", section:"Operations / Hiring", title:"Sling scheduling setup", detail:"David/Jason — Blocked on David approval", tags:["blocked"] },
+  { id:"ops-2", area:"shop", section:"Operations / Hiring", title:"Candidate sourcing",     detail:"Chris — 1 FT + 2 PT targets. After Sling complete.", tags:[], subtasks:[
+    "Write job description (FT version)",
+    "Write job description (PT version)",
+    "Post to Indeed + local boards",
+    "Screen incoming applications",
+    "Shortlist candidates for David review"
+  ]},
+  { id:"ops-3", area:"shop", section:"Operations / Hiring", title:"Hiring interviews/offers", detail:"Chris/David — Peak Fri/Sat + closing coverage. After candidates sourced.", tags:[], subtasks:[
+    "Schedule interviews with shortlisted candidates",
+    "Conduct interviews",
+    "Check references on finalists",
+    "Make offers",
+    "Onboard new hires"
+  ]},
+  { id:"ops-4", area:"shop", section:"Operations / Hiring", title:"Set up Eric on Slack",   detail:"Jason — Instructions sent to Eric",                         tags:[] },
+
+  // ── Growth Activation ───────────────────────────────────────────────────────
+  { id:"growth-1", area:"shop", section:"Growth Activation", title:"Wine club waitlist launch", detail:"Chris — Tied to website", tags:[], subtasks:[
+    "Design sign-up page (or landing section)",
+    "Set up Mailchimp segment for Wine Club",
+    "Connect sign-up form to segment",
+    "Add link to website nav + footer",
+    "Announce via email + Instagram"
+  ]},
+  { id:"growth-2", area:"shop", section:"Growth Activation", title:"Tastings / events planning", detail:"Rosina/Chris — In-store + private bookings", tags:[], subtasks:[
+    "Define event formats (in-store tasting, private booking, etc.)",
+    "Set a schedule for Q3 + Q4",
+    "Source supplier partners for tastings",
+    "Create booking process for private events",
+    "Promote via email + Instagram"
+  ]},
+  { id:"growth-3", area:"shop", section:"Growth Activation", title:"Instagram posting cadence",  detail:"Chris — Product features + brand stories",  tags:["ongoing"] },
+  { id:"growth-4", area:"shop", section:"Growth Activation", title:"Email campaign planning",    detail:"Chris — Monthly newsletter + promotional", tags:[], subtasks:[
+    "Define monthly themes for next 3 months",
+    "Build content calendar in Mailchimp",
+    "Draft first newsletter",
+    "Set recurring send schedule",
+    "Review open rates + adjust"
+  ]},
+  { id:"growth-5", area:"shop", section:"Growth Activation", title:"Exterior signage: fence panels",  detail:"David/Jason — Red with white vinyl",               tags:["in-progress"] },
+  { id:"growth-6", area:"shop", section:"Growth Activation", title:"Exterior signage: window graphics",detail:"David/Jason — Privacy coverage + delivery awareness",tags:["in-progress"] },
+  { id:"growth-7", area:"shop", section:"Growth Activation", title:"Exterior signage: frame painting", detail:"David/Jason — Black frame",                        tags:["in-progress"] },
+  { id:"growth-8", area:"shop", section:"Growth Activation", title:"Citation cleanup (broadwaywineshop.ca)", detail:"Chris — Domain redirect + citation updates across platforms", tags:[], subtasks:[
+    "Audit all citations mentioning broadwaywineshop.ca",
+    "Set up 301 redirect to broadwaybeerwine.ca",
+    "Update Google Business Profile",
+    "Update Yelp, YellowPages, Apple Maps listings",
+    "Check + fix any remaining directory listings"
+  ]},
+
+  // ── Other ───────────────────────────────────────────────────────────────────
+  { id:"other-1", area:"shop", section:"Other", title:"Jason briefing: Barnet SKU setup",        detail:"Chris — Training on workflow. After gifting SKU definition.", tags:[] },
+  { id:"other-2", area:"shop", section:"Other", title:"Bonus review calculation (March 2026)",   detail:"Eric — Confirm accountant completion with David",             tags:["overdue"] },
+
+  // ── Art Print Subscription ──────────────────────────────────────────────────
+  { id:"art-1", area:"design", section:"Art Print Subscription", title:"Concept definition",   detail:"Chris/Rosina — What are we selling? Theme? Format?", tags:[], subtasks:[
+    "Decide on theme / aesthetic direction",
+    "Define format (size, medium, edition size)",
+    "Decide frequency (monthly? quarterly?)",
+    "Define target customer"
+  ]},
+  { id:"art-2", area:"design", section:"Art Print Subscription", title:"Supplier research",    detail:"Chris/Rosina — Printing vendors, pricing, MOQ", tags:[], subtasks:[
+    "Research 3–5 fine art print vendors",
+    "Get pricing + MOQ for each",
+    "Request samples",
+    "Select preferred supplier"
+  ]},
+  { id:"art-3", area:"design", section:"Art Print Subscription", title:"Design mockups",       detail:"Chris/Rosina — Sample designs for launch", tags:[] },
+  { id:"art-4", area:"design", section:"Art Print Subscription", title:"Packaging design",     detail:"Chris/Rosina — Unboxing experience", tags:[], subtasks:[
+    "Define packaging format (tube, flat mailer, box?)",
+    "Design outer packaging",
+    "Design interior tissue / wrap",
+    "Include card / insert design",
+    "Source packaging supplier"
+  ]},
+  { id:"art-5", area:"design", section:"Art Print Subscription", title:"Pricing model",        detail:"Chris/Rosina — Monthly tier structure", tags:[], subtasks:[
+    "Calculate cost of goods per tier",
+    "Research competitor pricing",
+    "Define 2–3 tier structure",
+    "Set margins + pricing"
+  ]},
+  { id:"art-6", area:"design", section:"Art Print Subscription", title:"Platform / fulfillment",detail:"Chris/Rosina — Shopify? Print-on-demand? Subscription software?", tags:[], subtasks:[
+    "Evaluate Shopify + subscription app options",
+    "Evaluate print-on-demand (Printful, Gelato, etc.)",
+    "Compare fulfillment cost + control tradeoffs",
+    "Decide + set up platform"
+  ]},
+  { id:"art-7", area:"design", section:"Art Print Subscription", title:"Marketing / launch",   detail:"Chris/Rosina — Website, social, early adopter list", tags:[], subtasks:[
+    "Build landing page / waitlist",
+    "Set up social accounts or posts",
+    "Build early adopter email list",
+    "Plan launch announcement"
+  ]},
+  { id:"mint-1", area:"design", section:"Mint", title:"Coin design — Sundial project", detail:"Chris/Rosina — Active client work", tags:["ongoing"] },
+
+  // ── Personal ────────────────────────────────────────────────────────────────
+  { id:"pers-chaplin",  area:"personal", section:"Personal", title:"Call Mrs. Chaplin",                detail:"",                                tags:[] },
+  { id:"pers-aircanada",area:"personal", section:"Personal", title:"Reply to Air Canada claim refusal", detail:"Respond to claim refusal email", tags:[], subtasks:[
+    "Re-read refusal email carefully",
+    "Research passenger rights (APPR / CTA)",
+    "Draft escalation response",
+    "Send reply + keep copy"
+  ]},
+  { id:"pers-laura",    area:"personal", section:"Personal", title:"Call Laura about funds",            detail:"",                                tags:[] },
+  { id:"pers-1",        area:"personal", section:"Personal", title:"Car purchase decision",             detail:"Lease takeover vs. new purchase?", tags:[], subtasks:[
+    "Research available lease takeovers",
+    "Research new purchase options",
+    "Compare total cost of ownership",
+    "Test drive finalist(s)",
+    "Make decision + act"
+  ]},
+  { id:"pers-2",  area:"personal", section:"Personal", title:"Fitness routine",      detail:"Current plan and goals",                          tags:["in-progress"] },
+  { id:"pers-3",  area:"personal", section:"Personal", title:"Whitecaps season",     detail:"Match attendance + schedule",                     tags:["ongoing"] },
+  { id:"pers-4",  area:"personal", section:"Personal", title:"Son's film projects",  detail:"Family — Support + collaboration opportunities",   tags:["ongoing"] }
+];
+
+const BADGE_MAP = {
+  "blocked":     { cls: "badge-blocked",  label: "Blocked" },
+  "overdue":     { cls: "badge-overdue",  label: "Overdue" },
+  "in-progress": { cls: "badge-progress", label: "In Progress" },
+  "ongoing":     { cls: "badge-ongoing",  label: "Ongoing" }
+};
+
+const AREA_LABEL = { shop:"Shop", design:"Design", personal:"Personal" };
+
+const VIEW_TITLES = {
+  inbox:    "Inbox",
+  today:    "Today",
+  all:      "All Tasks",
+  shop:     "Broadway Beer Wine & Spirits",
+  design:   "Design",
+  personal: "Personal",
+  logbook:  "Logbook",
+  notes:    "Notes"
+};
+
+let state = {};
+let currentFilter = "all";
+let dynamicTasks = [];
+
+function loadState() {
+  try { const s = localStorage.getItem("tasks-v2"); state = s ? JSON.parse(s) : {}; }
+  catch(e) { state = {}; }
+  try { const d = localStorage.getItem("tasks-dynamic"); dynamicTasks = d ? JSON.parse(d) : []; }
+  catch(e) { dynamicTasks = []; }
+  if (!state["skip-kyc"]) state["skip-kyc"] = { today: true };
+  else if (!state["skip-kyc"].today && !state["skip-kyc"].completed) state["skip-kyc"].today = true;
+}
+
+function saveDynamicTasks() {
+  try { localStorage.setItem("tasks-dynamic", JSON.stringify(dynamicTasks)); } catch(e) {}
+}
+
+function allTasks() { return [...TASKS, ...dynamicTasks]; }
+
+// ── Add task modal ────────────────────────────────────────────────────────
+
+// Base sections per area — extended by custom entries stored in localStorage
+const BASE_SECTIONS = {
+  shop:     ["BC Products / Ordering","Marketing","Website / Astro Build","Skip the Dishes","Corporate Gifting","Bottlecapps Interim","Operations / Hiring","Growth Activation","Other"],
+  design:   ["Art Print Subscription","Mint"],
+  personal: ["Personal"]
+};
+
+let customAreas    = [];          // [{id, label}]  stored in 'tasks-custom-areas'
+let customSections = {};          // {areaId: [label, ...]}  stored in 'tasks-custom-sections'
+
+function loadCustomMeta() {
+  try { customAreas    = JSON.parse(localStorage.getItem("tasks-custom-areas")    || "[]"); } catch(e) { customAreas = []; }
+  try { customSections = JSON.parse(localStorage.getItem("tasks-custom-sections") || "{}"); } catch(e) { customSections = {}; }
+}
+function saveCustomMeta() {
+  localStorage.setItem("tasks-custom-areas",    JSON.stringify(customAreas));
+  localStorage.setItem("tasks-custom-sections", JSON.stringify(customSections));
+}
+
+function sectionsForArea(areaId) {
+  return [...(BASE_SECTIONS[areaId] || []), ...(customSections[areaId] || [])];
+}
+
+function rebuildAreaSelect(preferArea) {
+  const el = document.getElementById("mt-area");
+  const builtIn = [
+    { id:"shop",     label:"Shop" },
+    { id:"design",   label:"Design" },
+    { id:"personal", label:"Personal" }
+  ];
+  const all = [...builtIn, ...customAreas];
+  el.innerHTML = all.map(a => `<option value="${a.id}">${a.label}</option>`).join("");
+  if (preferArea && all.find(a => a.id === preferArea)) el.value = preferArea;
+}
+
+function populateSections() {
+  const area = document.getElementById("mt-area").value;
+  const secs = sectionsForArea(area);
+  const el   = document.getElementById("mt-section");
+  el.innerHTML = secs.map(s => `<option value="${s}">${s}</option>`).join("");
+}
+
+// New area
+function toggleNewArea() {
+  const row = document.getElementById("new-area-row");
+  row.classList.toggle("visible");
+  if (row.classList.contains("visible")) {
+    document.getElementById("new-area-input").value = "";
+    setTimeout(() => document.getElementById("new-area-input").focus(), 20);
+  }
+}
+function confirmNewArea() {
+  const val = document.getElementById("new-area-input").value.trim();
+  if (!val) { toggleNewArea(); return; }
+  const id = "area-" + Date.now();
+  customAreas.push({ id, label: val });
+  saveCustomMeta();
+  rebuildAreaSelect(id);
+  populateSections();
+  document.getElementById("new-area-row").classList.remove("visible");
+}
+
+// New section
+function toggleNewSection() {
+  const row = document.getElementById("new-section-row");
+  row.classList.toggle("visible");
+  if (row.classList.contains("visible")) {
+    document.getElementById("new-section-input").value = "";
+    setTimeout(() => document.getElementById("new-section-input").focus(), 20);
+  }
+}
+function confirmNewSection() {
+  const val  = document.getElementById("new-section-input").value.trim();
+  if (!val) { toggleNewSection(); return; }
+  const area = document.getElementById("mt-area").value;
+  if (!customSections[area]) customSections[area] = [];
+  customSections[area].push(val);
+  saveCustomMeta();
+  populateSections();
+  document.getElementById("mt-section").value = val;
+  document.getElementById("new-section-row").classList.remove("visible");
+}
+
+function openAddTask() {
+  loadCustomMeta();
+  const modal = document.getElementById("add-task-modal");
+
+  if (currentFilter === "inbox") {
+    // Inbox: hide area/section fields — task goes straight to inbox
+    document.getElementById("mt-area").closest(".modal-field-col").style.display = "none";
+    document.getElementById("mt-section").closest(".modal-field-col").style.display = "none";
+  } else {
+    document.getElementById("mt-area").closest(".modal-field-col").style.display = "";
+    document.getElementById("mt-section").closest(".modal-field-col").style.display = "";
+    const preferArea = ["shop","design","personal"].includes(currentFilter) ? currentFilter : "shop";
+    rebuildAreaSelect(preferArea);
+    populateSections();
+  }
+
+  modal.classList.add("open");
+  document.getElementById("mt-save").disabled = true;
+  setTimeout(() => document.getElementById("mt-title").focus(), 30);
+}
+
+function closeAddTask() {
+  document.getElementById("add-task-modal").classList.remove("open");
+  document.getElementById("mt-title").value = "";
+  document.getElementById("mt-notes").value = "";
+  document.getElementById("new-area-row").classList.remove("visible");
+  document.getElementById("new-section-row").classList.remove("visible");
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById("add-task-modal")) closeAddTask();
+}
+
+function handleModalKey(e) {
+  if (e.key === "Escape") { closeAddTask(); return; }
+  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { saveNewTask(); return; }
+}
+
+function saveNewTask() {
+  const title = document.getElementById("mt-title").value.trim();
+  if (!title) return;
+  const isInbox = currentFilter === "inbox";
+  const area    = isInbox ? "inbox" : document.getElementById("mt-area").value;
+  const section = isInbox ? "Inbox" : (document.getElementById("mt-section").value || sectionsForArea(area)[0] || "Other");
+  const detail  = document.getElementById("mt-notes").value.trim();
+
+  const newTask = {
+    id: "dyn-" + Date.now(),
+    area, section, title, detail,
+    tags: [], subtasks: [], _dynamic: true
+  };
+  dynamicTasks.push(newTask);
+  saveDynamicTasks();
+
+  if (currentFilter === "today") {
+    state[newTask.id] = { today: true };
+    saveState();
+  }
+
+  closeAddTask();
+  render();
+}
+
+function saveState() {
+  try { localStorage.setItem("tasks-v2", JSON.stringify(state)); } catch(e) {}
+}
+
+function toggleTask(id) {
+  if (state[id]?.completed) delete state[id];
+  else state[id] = { completed:true, completedAt: new Date().toLocaleDateString("en-CA") };
+  saveState(); render();
+}
+
+function toggleToday(id) {
+  if (state[id]?.today) { const s = {...state[id]}; delete s.today; state[id] = Object.keys(s).length ? s : undefined; if (!state[id]) delete state[id]; }
+  else state[id] = { ...(state[id]||{}), today: true };
+  saveState(); render();
+}
+
+function toggleNote(id) {
+  const open = !state[id]?.noteOpen;
+  state[id] = { ...(state[id]||{}), noteOpen: open };
+  saveState(); render();
+  if (open) setTimeout(() => { const el = document.getElementById('note-'+id); if(el) el.focus(); }, 30);
+}
+
+function saveNote(id, val) {
+  state[id] = { ...(state[id]||{}), note: val };
+  saveState();
+}
+
+function toggleSubtaskInput(id) {
+  const open = !state[id]?.subtaskInput;
+  state[id] = { ...(state[id]||{}), subtaskInput: open };
+  if (open) state[id+'__open'] = true;
+  saveState(); render();
+  if (open) setTimeout(() => { const el = document.getElementById('newsub-'+id); if(el) el.focus(); }, 30);
+}
+
+function confirmNewSubtask(id) {
+  const el = document.getElementById('newsub-'+id);
+  if (!el) return;
+  const val = el.value.trim();
+  if (val) {
+    const existing = state[id]?.dynamicSubtasks || [];
+    state[id] = { ...(state[id]||{}), dynamicSubtasks: [...existing, val], subtaskInput: false };
+    saveState(); render();
+  } else { toggleSubtaskInput(id); }
+}
+
+function removeDynamicSubtask(id, idx) {
+  const arr = [...(state[id]?.dynamicSubtasks || [])];
+  arr.splice(idx, 1);
+  state[id] = { ...(state[id]||{}), dynamicSubtasks: arr };
+  saveState(); render();
+}
+
+function toggleDynSubtask(taskId, idx) {
+  const key = taskId + "__dynsub__" + idx;
+  if (state[key]?.completed) delete state[key];
+  else state[key] = { completed: true, completedAt: new Date().toLocaleDateString("en-CA") };
+  saveState(); render();
+}
+
+function toggleSubtask(taskId, idx) {
+  const key = taskId + "__sub__" + idx;
+  if (state[key]?.completed) delete state[key];
+  else state[key] = { completed:true, completedAt: new Date().toLocaleDateString("en-CA") };
+  saveState(); render();
+}
+
+function toggleSubtasks(taskId) {
+  const key = taskId + "__open";
+  if (state[key]) delete state[key];
+  else state[key] = true;
+  saveState(); render();
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById('view-title').textContent = VIEW_TITLES[f] || f;
+
+  // Show/hide panels
+  const panels = { 'task-content': false, 'logbook-panel': false, 'notes-panel': false };
+  if (f === 'notes')   panels['notes-panel']   = true;
+  else if (f === 'logbook') panels['logbook-panel'] = true;
+  else                 panels['task-content']   = true;
+
+  Object.entries(panels).forEach(([id, show]) => {
+    document.getElementById(id).style.display = show ? '' : 'none';
+  });
+
+  if (f === 'notes') {
+    const ta = document.getElementById('notes-textarea');
+    ta.value = localStorage.getItem('notes-pad') || '';
+    ta.focus();
+  } else if (f === 'logbook') {
+    renderLogbook();
+  } else {
+    render();
+  }
+}
+
+function saveNotesPad(val) {
+  localStorage.setItem('notes-pad', val);
+}
+
+function toggleSection(cardId) {
+  document.getElementById(cardId).classList.toggle("collapsed");
+}
+
+const checkSVG = `<svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>`;
+
+function subRowHTML(taskId, sub, idx) {
+  const key    = taskId + "__sub__" + idx;
+  const isDone = !!state[key]?.completed;
+  return `
+    <div class="subtask-row${isDone?" is-done":""}">
+      <div class="sub-check-wrap">
+        <input type="checkbox" class="task-check" ${isDone?"checked":""} onchange="toggleSubtask('${taskId}',${idx})">
+        <div class="sub-check-circle">${checkSVG}</div>
+      </div>
+      <div class="subtask-title">${sub}</div>
+    </div>`;
+}
+
+// ── Inbox row (with Move To… affordance) ─────────────────────────────────
+function inboxRowHTML(t) {
+  const moveOpen = !!state[t.id + "__moveOpen"];
+  const areaOpts = [
+    {id:"shop",label:"Shop"}, {id:"design",label:"Design"}, {id:"personal",label:"Personal"},
+    ...customAreas
+  ].map(a => `<option value="${a.id}">${a.label}</option>`).join("");
+
+  return `
+    <div class="task-row" id="irow-${t.id}">
+      <div class="check-wrap">
+        <input type="checkbox" class="task-check" onchange="toggleTask('${t.id}')">
+        <div class="check-circle">${checkSVG}</div>
+      </div>
+      <div class="task-body">
+        <div class="task-title">${t.title}</div>
+        ${t.detail ? `<div class="task-detail">${t.detail}</div>` : ""}
+        <div class="move-row${moveOpen ? " open" : ""}" id="move-row-${t.id}">
+          <select class="move-select" id="move-area-${t.id}" onchange="updateMoveSections('${t.id}')">${areaOpts}</select>
+          <select class="move-select" id="move-sec-${t.id}"></select>
+          <button class="move-confirm-btn" onclick="confirmMove('${t.id}')">Move</button>
+        </div>
+      </div>
+      <button class="move-btn" onclick="toggleMoveRow('${t.id}')">${moveOpen ? "Cancel" : "Sort →"}</button>
+    </div>`;
+}
+
+function toggleMoveRow(id) {
+  const key = id + "__moveOpen";
+  state[key] = !state[key];
+  render();
+  if (state[key]) {
+    setTimeout(() => {
+      const areaEl = document.getElementById("move-area-" + id);
+      if (areaEl) populateMoveSections(id, areaEl.value);
+    }, 20);
+  }
+}
+
+function populateMoveSections(taskId, areaId) {
+  const el = document.getElementById("move-sec-" + taskId);
+  if (!el) return;
+  const secs = sectionsForArea(areaId);
+  el.innerHTML = secs.map(s => `<option value="${s}">${s}</option>`).join("");
+}
+
+function updateMoveSections(taskId) {
+  const areaEl = document.getElementById("move-area-" + taskId);
+  if (areaEl) populateMoveSections(taskId, areaEl.value);
+}
+
+function confirmMove(taskId) {
+  const area    = document.getElementById("move-area-" + taskId)?.value;
+  const section = document.getElementById("move-sec-"  + taskId)?.value;
+  if (!area) return;
+  const idx = dynamicTasks.findIndex(t => t.id === taskId);
+  if (idx > -1) {
+    dynamicTasks[idx] = { ...dynamicTasks[idx], area, section: section || sectionsForArea(area)[0] || "Other" };
+    saveDynamicTasks();
+  }
+  delete state[taskId + "__moveOpen"];
+  saveState(); render();
+}
+
+// ── Logbook ───────────────────────────────────────────────────────────────
+function dateGroupLabel(dateStr) {
+  const today     = new Date().toLocaleDateString("en-CA");
+  const yesterday = new Date(Date.now() - 86400000).toLocaleDateString("en-CA");
+  if (!dateStr)            return "Earlier";
+  if (dateStr === today)   return "Today";
+  if (dateStr === yesterday) return "Yesterday";
+  const diff = Math.floor((Date.now() - new Date(dateStr)) / 86400000);
+  if (diff <= 7)  return "This Week";
+  if (diff <= 30) return "This Month";
+  return "Earlier";
+}
+
+function renderLogbook() {
+  const el  = document.getElementById("logbook-main");
+  const all = allTasks();
+  const completed = all.filter(t => !!state[t.id]?.completed);
+
+  // Pre-seeded completed task
+  const preTask = { id:"__pre__", title:"Invoice follow-up — Nina Maravic / Vancouver Catering",
+    detail:"Vancouver Opera order, 24 bottles, 10% discount, downtown delivery", area:"shop",
+    completedAt:"2026-04-19", tags:[], subtasks:[] };
+  const rows = [
+    ...completed.map(t => ({ ...t, completedAt: state[t.id].completedAt })),
+    ...(completed.find(t => t.id==="__pre__") ? [] : [preTask])
+  ].sort((a,b) => (b.completedAt||"").localeCompare(a.completedAt||""));
+
+  if (!rows.length) {
+    el.innerHTML = `<div class="logbook-empty">No completed tasks yet</div>`;
+    return;
+  }
+
+  // Group by date label
+  const groups = {};
+  const order  = [];
+  rows.forEach(t => {
+    const lbl = dateGroupLabel(t.completedAt);
+    if (!groups[lbl]) { groups[lbl] = []; order.push(lbl); }
+    groups[lbl].push(t);
+  });
+
+  el.innerHTML = order.map(lbl => `
+    <div class="logbook-date-header">${lbl}</div>
+    ${groups[lbl].map(t => `
+      <div class="task-row is-done">
+        <div class="check-wrap">
+          <input type="checkbox" class="task-check" checked onchange="toggleTask('${t.id}')">
+          <div class="check-circle">${checkSVG}</div>
+        </div>
+        <div class="task-body">
+          <div class="task-title">${t.title}</div>
+          ${t.detail ? `<div class="task-detail">${t.detail}</div>` : ""}
+          <div class="done-stamp"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg> ${t.completedAt || ""}</div>
+        </div>
+      </div>`).join("")}
+  `).join("");
+}
+
+function taskRowHTML(t) {
+  const isDone       = !!state[t.id]?.completed;
+  const isOverdue    = t.tags.includes("overdue") && !isDone;
+  const isToday      = !!state[t.id]?.today && !isDone;
+  const noteOpen     = !!state[t.id]?.noteOpen && !isDone;
+  const noteText     = state[t.id]?.note || "";
+  const hasNote      = !!noteText;
+  const subInputOpen = !!state[t.id]?.subtaskInput && !isDone;
+  const dynSubs      = state[t.id]?.dynamicSubtasks || [];
+
+  const badges = t.tags.length && !isDone
+    ? `<div class="task-meta">${t.tags.map(tg => `<span class="badge ${BADGE_MAP[tg].cls}">${BADGE_MAP[tg].label}</span>`).join("")}</div>`
+    : "";
+  const stamp = isDone
+    ? `<div class="done-stamp"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg> ${state[t.id].completedAt}</div>`
+    : "";
+
+  // Sub-tasks
+  let subHTML = "";
+  if (!isDone) {
+    const staticSubs = t.subtasks || [];
+    const staticDone = staticSubs.filter((_,i) => state[t.id+"__sub__"+i]?.completed).length;
+    const dynDone    = dynSubs.filter((_,i) => state[t.id+"__dynsub__"+i]?.completed).length;
+    const subTotal   = staticSubs.length + dynSubs.length;
+    const subDone    = staticDone + dynDone;
+    const allDone    = subTotal > 0 && subDone === subTotal;
+    const isOpen     = !!state[t.id+"__open"];
+
+    let pipHTML = subTotal > 0 ? `
+      <div class="subtask-toggle" onclick="toggleSubtasks('${t.id}')">
+        <span class="subtask-pip${allDone?" all-done":""}">${subDone}/${subTotal} steps</span>
+        <div class="subtask-chevron${isOpen?" open":""}">
+          <svg viewBox="0 0 10 10"><polyline points="2,4 5,7 8,4"/></svg>
+        </div>
+      </div>` : "";
+
+    const showRows = isOpen || (subInputOpen && subTotal === 0);
+    let rowsHTML = "";
+    if (showRows) {
+      rowsHTML += staticSubs.map((sub,i) => subRowHTML(t.id, sub, i)).join("");
+      rowsHTML += dynSubs.map((sub,i) => `
+        <div class="subtask-row${state[t.id+"__dynsub__"+i]?.completed?" is-done":""}">
+          <div class="sub-check-wrap">
+            <input type="checkbox" class="task-check" ${state[t.id+"__dynsub__"+i]?.completed?"checked":""} onchange="toggleDynSubtask('${t.id}',${i})">
+            <div class="sub-check-circle">${checkSVG}</div>
+          </div>
+          <div class="subtask-title">${sub}</div>
+          <button class="dyn-sub-del" onclick="removeDynamicSubtask('${t.id}',${i})" title="Remove">×</button>
+        </div>`).join("");
+      if (subInputOpen) rowsHTML += `
+        <div class="new-sub-row">
+          <input class="new-sub-input" id="newsub-${t.id}" type="text" placeholder="Add step…"
+            onkeydown="if(event.key==='Enter')confirmNewSubtask('${t.id}');if(event.key==='Escape')toggleSubtaskInput('${t.id}')">
+          <span class="new-sub-hint">↵ to save</span>
+        </div>`;
+    } else if (subInputOpen) {
+      rowsHTML += `
+        <div class="new-sub-row">
+          <input class="new-sub-input" id="newsub-${t.id}" type="text" placeholder="Add step…"
+            onkeydown="if(event.key==='Enter')confirmNewSubtask('${t.id}');if(event.key==='Escape')toggleSubtaskInput('${t.id}')">
+          <span class="new-sub-hint">↵ to save</span>
+        </div>`;
+    }
+
+    if (subTotal > 0 || subInputOpen) {
+      subHTML = pipHTML + `<div class="subtask-rows${showRows||subInputOpen?" expanded":""}">${rowsHTML}</div>`;
+    }
+  }
+
+  // Note area
+  let noteHTML = "";
+  if (!isDone) {
+    if (noteOpen) {
+      noteHTML = `<div class="note-area"><textarea class="note-textarea" id="note-${t.id}"
+        oninput="saveNote('${t.id}',this.value)"
+        onkeydown="if(event.key==='Escape')toggleNote('${t.id}')"
+        placeholder="Add a note…">${noteText}</textarea></div>`;
+    } else if (hasNote) {
+      noteHTML = `<div class="task-note-display">📝 ${noteText}</div>`;
+    }
+  }
+
+  // Action buttons
+  const flagSVG = `<svg viewBox="0 0 14 14" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M2 2h8l-2 3 2 3H2V2z"/><line x1="2" y1="2" x2="2" y2="13"/></svg>`;
+  const noteSVG = `<svg viewBox="0 0 14 14" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M2 2h10v8H8l-2 2V10H2V2z"/></svg>`;
+  const plusSVG = `<svg viewBox="0 0 14 14" stroke-width="2.2" stroke-linecap="round" fill="none"><line x1="7" y1="2" x2="7" y2="12"/><line x1="2" y1="7" x2="12" y2="7"/></svg>`;
+
+  const actions = !isDone ? `
+    <div class="task-actions">
+      <button class="today-btn${isToday?" is-today":""}" onclick="toggleToday('${t.id}')" title="Mark as Today">${flagSVG}</button>
+      <button class="note-btn${hasNote?" has-note":""}${noteOpen?" is-open":""}" onclick="toggleNote('${t.id}')" title="Add note">${noteSVG}</button>
+      <button class="add-sub-btn${subInputOpen?" is-open":""}" onclick="toggleSubtaskInput('${t.id}')" title="Add step">${plusSVG}</button>
+    </div>` : "";
+
+  return `
+    <div class="task-row${isDone?" is-done":""}${isOverdue?" is-overdue":""}${isToday?" is-today":""}">
+      <div class="check-wrap">
+        <input type="checkbox" class="task-check" ${isDone?"checked":""} onchange="toggleTask('${t.id}')">
+        <div class="check-circle">${checkSVG}</div>
+      </div>
+      <div class="task-body">
+        <div class="task-title">${t.title}</div>
+        ${t.detail ? `<div class="task-detail">${t.detail}</div>` : ""}
+        ${badges}${stamp}${subHTML}${noteHTML}
+      </div>
+      ${actions}
+    </div>`;
+}
+
+function render() {
+  const mainTasks = document.getElementById("main-tasks");
+  const doneSec   = document.getElementById("done-section");
+  const all       = allTasks();
+
+  const visible = all.filter(t => {
+    if (currentFilter === "today")  return !!state[t.id]?.today && !state[t.id]?.completed;
+    if (currentFilter === "inbox")  return t.area === "inbox"   && !state[t.id]?.completed;
+    if (currentFilter === "all")    return t.area !== "inbox"   && !state[t.id]?.completed;
+    return t.area === currentFilter && !state[t.id]?.completed;
+  });
+
+  // Group by section
+  const secMap = {};
+  visible.forEach(t => {
+    const k = t.area + "|" + t.section;
+    if (!secMap[k]) secMap[k] = { area: t.area, name: t.section, tasks: [] };
+    secMap[k].tasks.push(t);
+  });
+
+  // Define showPre first (used in multiple places)
+  const showPre = (currentFilter === "all" || currentFilter === "shop") && currentFilter !== "today";
+
+  // Done count
+  let done = 0;
+  visible.forEach(t => { if (state[t.id]?.completed) done++; });
+  if (showPre) done++;
+
+  // Sidebar counts
+  const nc = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n > 0 ? n : ""; };
+  nc("nc-inbox",    all.filter(t => t.area==="inbox"         && !state[t.id]?.completed).length);
+  nc("nc-today",    all.filter(t => !!state[t.id]?.today     && !state[t.id]?.completed).length);
+  nc("nc-shop",     all.filter(t => t.area==="shop"          && !state[t.id]?.completed).length);
+  nc("nc-design",   all.filter(t => t.area==="design"        && !state[t.id]?.completed).length);
+  nc("nc-personal", all.filter(t => t.area==="personal"      && !state[t.id]?.completed).length);
+  nc("nc-logbook",  all.filter(t => !!state[t.id]?.completed).length + (showPre ? 1 : 0));
+
+  // View subtitle
+  const openCount = visible.filter(t => !state[t.id]?.completed).length;
+  const sub = document.getElementById("view-subtitle");
+  if (sub) sub.textContent = currentFilter === "notes" ? "" : `${openCount} open task${openCount !== 1 ? "s" : ""}`;
+
+  // Inbox: flat task list with "Move to…" on each row
+  if (currentFilter === "inbox") {
+    if (!visible.length) {
+      mainTasks.innerHTML = `<div class="inbox-empty"><div class="inbox-empty-icon">📭</div>Inbox is empty</div>`;
+    } else {
+      mainTasks.innerHTML = visible.map(t => inboxRowHTML(t)).join("");
+    }
+    doneSec.innerHTML = "";
+    return;
+  }
+
+  // Today: flat list grouped by section label (no collapse)
+  if (currentFilter === "today") {
+    if (!visible.length) {
+      mainTasks.innerHTML = `<div class="inbox-empty"><div class="inbox-empty-icon">✓</div>Nothing flagged for today</div>`;
+    } else {
+      mainTasks.innerHTML = visible.map(taskRowHTML).join("");
+    }
+    doneSec.innerHTML = "";
+    return;
+  }
+
+  // Sections
+  let lastArea = null;
+  mainTasks.innerHTML = Object.values(secMap).map(sec => {
+    const activeTasks = sec.tasks.filter(t => !state[t.id]?.completed);
+    if (!activeTasks.length) return "";
+    const openN  = activeTasks.length;
+    const cardId = "card-" + (sec.area + sec.name).replace(/[^a-z0-9]/gi, "-");
+    const rows   = activeTasks.map(taskRowHTML).join("");
+
+    let areaHeader = "";
+    if (currentFilter === "all" && sec.area !== lastArea) {
+      lastArea = sec.area;
+      areaHeader = `
+        <div class="area-title">
+          <span class="area-title-text">${sec.area === "shop" ? "Shop" : sec.area === "design" ? "Design" : "Personal"}</span>
+          <div class="area-title-rule"></div>
+        </div>`;
+    }
+
+    return `${areaHeader}
+      <div class="section-group" id="${cardId}">
+        <div class="section-header" onclick="toggleSection('${cardId}')">
+          <span class="section-name">${sec.name}</span>
+          <div class="section-right">
+            <span class="section-open-count">${openN}</span>
+            <div class="section-chevron"><svg viewBox="0 0 10 10"><polyline points="2,4 5,7 8,4"/></svg></div>
+          </div>
+        </div>
+        <div class="section-tasks">${rows}</div>
+      </div>`;
+  }).join("");
+
+  // Completed tasks
+  const completedTasks = all.filter(t => state[t.id]?.completed && (currentFilter === "all" || t.area === currentFilter));
+  const preRow = showPre ? `
+    <div class="task-row is-done">
+      <div class="check-wrap">
+        <input type="checkbox" class="task-check" checked disabled>
+        <div class="check-circle">${checkSVG}</div>
+      </div>
+      <div class="task-body">
+        <div class="task-title">Invoice follow-up — Nina Maravic / Vancouver Catering</div>
+        <div class="task-detail">Vancouver Opera order, 24 bottles, 10% discount, downtown delivery</div>
+        <div class="done-stamp"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg> 2026-04-19</div>
+      </div>
+    </div>` : "";
+
+  const completedRows = completedTasks.map(t => `
+    <div class="task-row is-done">
+      <div class="check-wrap">
+        <input type="checkbox" class="task-check" checked onchange="toggleTask('${t.id}')">
+        <div class="check-circle">${checkSVG}</div>
+      </div>
+      <div class="task-body">
+        <div class="task-title">${t.title}</div>
+        ${t.detail ? `<div class="task-detail">${t.detail}</div>` : ""}
+        <div class="done-stamp"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg> ${state[t.id].completedAt}</div>
+      </div>
+    </div>`).join("");
+
+  const allDone = preRow + completedRows;
+  if (allDone) {
+    doneSec.innerHTML = `
+      <div class="done-group">
+        <div class="done-group-header">
+          <span class="done-group-label">Completed</span>
+          <span class="done-count-badge">${done}</span>
+        </div>
+        ${allDone}
+      </div>`;
+  } else {
+    doneSec.innerHTML = "";
+  }
+}
+
+// ⌘N / Ctrl+N shortcut
+document.addEventListener("keydown", e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === "n") {
+    e.preventDefault();
+    openAddTask();
+  }
+});
+
+// Keep save button disabled until title is typed
+document.getElementById("mt-title").addEventListener("input", function() {
+  document.getElementById("mt-save").disabled = !this.value.trim();
+});
+
+loadState();
+loadCustomMeta();
+render();
+</script>
+</body>
+</html>
