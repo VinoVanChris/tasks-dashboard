@@ -931,6 +931,8 @@
     .sidebar.mobile-hidden {
       transform: translateX(-100%);
       pointer-events: none;
+      visibility: hidden;
+      opacity: 0;
     }
 
     .sidebar-header {
@@ -988,6 +990,7 @@
       position: absolute; inset: 0;
       width: 100%; overflow-y: auto;
       -webkit-overflow-scrolling: touch;
+      background: var(--main-bg);
     }
     .notes-view textarea { min-height: 60vh; }
     .fab { bottom: 28px; right: 20px; z-index: 100; }
