@@ -731,6 +731,117 @@
   .modal-save-btn:active { transform: scale(0.97); }
   .modal-save-btn:disabled { opacity: 0.4; cursor: default; }
 
+  /* ── When picker ────────────────────────────────────────────────────────── */
+  .when-overlay {
+    display: none; position: fixed; inset: 0; z-index: 700;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    align-items: flex-end; justify-content: center;
+  }
+  .when-overlay.open { display: flex; }
+  .when-sheet {
+    background: #2C2C2E; border-radius: 20px 20px 0 0;
+    width: 100%; max-width: 480px;
+    padding: 20px 0 env(safe-area-inset-bottom, 24px);
+    animation: slideUp 0.22s cubic-bezier(0.4,0,0.2,1);
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+  .when-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px 14px;
+  }
+  .when-heading { font-size: 17px; font-weight: 700; color: white; }
+  .when-close-btn {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 15px; line-height: 1;
+  }
+  .when-option {
+    display: flex; align-items: center; gap: 14px;
+    padding: 13px 22px; cursor: pointer; transition: background 0.1s;
+  }
+  .when-option:hover { background: rgba(255,255,255,0.06); }
+  .when-option-icon { font-size: 20px; width: 26px; text-align: center; }
+  .when-option-label { font-size: 16px; color: white; flex: 1; }
+  .when-option-check { color: #0A84FF; font-size: 18px; font-weight: 700; }
+  .when-sep { height: 0.5px; background: rgba(255,255,255,0.1); margin: 6px 0; }
+
+  /* Calendar */
+  .when-cal { padding: 6px 16px 4px; }
+  .when-cal-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 6px 10px;
+  }
+  .when-cal-month { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.55); }
+  .when-cal-arrow {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: rgba(255,255,255,0.1); border: none; cursor: pointer;
+    color: white; font-size: 13px; display: flex; align-items: center; justify-content: center;
+  }
+  .when-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
+  .when-cal-dow { text-align: center; font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.35); padding: 3px 0; }
+  .when-cal-day {
+    aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; font-size: 14px; color: rgba(255,255,255,0.8);
+    cursor: pointer; border: none; background: transparent; font-family: inherit;
+    transition: background 0.1s;
+  }
+  .when-cal-day:hover:not(.past):not(.empty) { background: rgba(255,255,255,0.12); }
+  .when-cal-day.today-cal { color: #0A84FF; font-weight: 700; }
+  .when-cal-day.selected  { background: #0A84FF !important; color: white; font-weight: 600; }
+  .when-cal-day.past      { color: rgba(255,255,255,0.2); cursor: default; }
+  .when-cal-day.empty     { cursor: default; }
+
+  .when-clear {
+    margin: 10px 18px 0; width: calc(100% - 36px);
+    background: rgba(255,59,48,0.18); border: none; border-radius: 12px;
+    padding: 13px; font-family: inherit; font-size: 16px; font-weight: 600;
+    color: #FF453A; cursor: pointer; transition: background 0.1s;
+  }
+  .when-clear:hover { background: rgba(255,59,48,0.28); }
+
+  /* When button in task modal */
+  .when-trigger {
+    display: flex; align-items: center; gap: 6px;
+    border: 1px solid rgba(0,0,0,0.10); border-radius: 8px;
+    background: rgba(0,0,0,0.03); padding: 7px 12px;
+    font-family: inherit; font-size: 13px; color: var(--label3);
+    cursor: pointer; transition: border-color 0.1s, color 0.1s;
+    white-space: nowrap;
+  }
+  .when-trigger:hover   { border-color: var(--blue); color: var(--blue); }
+  .when-trigger.is-set  { color: var(--blue); border-color: rgba(0,122,255,0.3); background: var(--blue-light); }
+  .when-trigger.is-today-set { color: var(--orange); border-color: rgba(255,149,0,0.3); background: var(--orange-light); }
+  .when-trigger.is-overdue   { color: var(--red);  border-color: rgba(255,59,48,0.3);  background: var(--red-light); }
+
+  /* Due date label under task title */
+  .task-due {
+    font-size: 12px; font-weight: 500; color: var(--label3); margin-top: 2px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .task-due.due-today   { color: var(--orange); }
+  .task-due.due-overdue { color: var(--red); }
+  .task-due.due-future  { color: var(--blue); }
+
+  /* ── Upcoming view ───────────────────────────────────────────────────────── */
+  .upcoming-day { margin-top: 28px; }
+  .upcoming-day:first-child { margin-top: 8px; }
+  .upcoming-day-header {
+    display: flex; align-items: baseline; gap: 12px;
+    padding-bottom: 8px; border-bottom: 1.5px solid var(--sep);
+    margin-bottom: 2px;
+  }
+  .upcoming-day-num {
+    font-size: 36px; font-weight: 700; letter-spacing: -1.5px;
+    color: var(--label); line-height: 1;
+  }
+  .upcoming-day-num.is-today { color: var(--blue); }
+  .upcoming-day-label { font-size: 16px; font-weight: 500; color: var(--label3); }
+  .upcoming-empty { text-align: center; color: var(--label3); font-size: 14px; padding: 60px 0; }
+
   /* ── Mobile back button (hidden on desktop) ──────────────────────────── */
   .mobile-back-btn { display: none; }
 
@@ -879,6 +990,21 @@
         <span class="nav-label">Today</span>
         <span class="nav-count" id="nc-today"></span>
       </button>
+      <!-- Upcoming -->
+      <button class="nav-item" onclick="setFilter('upcoming',this)">
+        <span class="nav-icon">
+          <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="3" width="12" height="11" rx="1.5" stroke="#FF3B30" stroke-width="1.4"/>
+            <line x1="5" y1="1.5" x2="5" y2="4.5" stroke="#FF3B30" stroke-width="1.4" stroke-linecap="round"/>
+            <line x1="11" y1="1.5" x2="11" y2="4.5" stroke="#FF3B30" stroke-width="1.4" stroke-linecap="round"/>
+            <line x1="2" y1="6.5" x2="14" y2="6.5" stroke="#FF3B30" stroke-width="1.2"/>
+            <rect x="5" y="9" width="2" height="2" rx="0.4" fill="#FF3B30"/>
+            <rect x="9" y="9" width="2" height="2" rx="0.4" fill="#FF3B30"/>
+          </svg>
+        </span>
+        <span class="nav-label">Upcoming</span>
+        <span class="nav-count" id="nc-upcoming"></span>
+      </button>
       <!-- All -->
       <button class="nav-item active" onclick="setFilter('all',this)">
         <span class="nav-icon">
@@ -960,6 +1086,11 @@
       <div id="done-section"></div>
     </div>
 
+    <!-- Upcoming view -->
+    <div class="task-content" id="upcoming-panel" style="display:none">
+      <div id="upcoming-main"></div>
+    </div>
+
     <!-- Logbook view -->
     <div class="task-content" id="logbook-panel" style="display:none">
       <div id="logbook-main"></div>
@@ -977,6 +1108,31 @@
       <svg viewBox="0 0 20 20"><line x1="10" y1="3" x2="10" y2="17"/><line x1="3" y1="10" x2="17" y2="10"/></svg>
     </button>
   </main>
+</div>
+
+<!-- ── When Picker ───────────────────────────────────────────────── -->
+<div class="when-overlay" id="when-overlay" onclick="handleWhenOverlayClick(event)">
+  <div class="when-sheet" id="when-sheet">
+    <div class="when-header">
+      <span class="when-heading">When?</span>
+      <button class="when-close-btn" onclick="closeWhenPicker()">✕</button>
+    </div>
+    <div class="when-option" onclick="pickWhenToday()">
+      <span class="when-option-icon">⭐</span>
+      <span class="when-option-label">Today</span>
+      <span class="when-option-check" id="when-check-today" style="display:none">✓</span>
+    </div>
+    <div class="when-sep"></div>
+    <div class="when-cal" id="when-cal">
+      <div class="when-cal-nav">
+        <button class="when-cal-arrow" onclick="calPrev()">‹</button>
+        <span class="when-cal-month" id="when-cal-month"></span>
+        <button class="when-cal-arrow" onclick="calNext()">›</button>
+      </div>
+      <div class="when-cal-grid" id="when-cal-grid"></div>
+    </div>
+    <button class="when-clear" id="when-clear-btn" onclick="clearWhenDate()">Clear</button>
+  </div>
 </div>
 
 <!-- ── Token Modal ───────────────────────────────────────────────── -->
@@ -1004,6 +1160,12 @@
         placeholder="Notes"
         rows="3"
         onkeydown="handleModalKey(event)"></textarea>
+      <div style="margin-top:12px;">
+        <button class="when-trigger" id="when-trigger-btn" onclick="openWhenPicker()">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.4"/><line x1="5" y1="1.5" x2="5" y2="4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="11" y1="1.5" x2="11" y2="4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="2" y1="6.5" x2="14" y2="6.5" stroke="currentColor" stroke-width="1.2"/></svg>
+          <span id="when-trigger-label">When?</span>
+        </button>
+      </div>
       <div class="modal-fields">
         <!-- Area column -->
         <div class="modal-field-col">
@@ -1311,6 +1473,7 @@ const AREA_LABEL = { shop:"Shop", design:"Design", personal:"Personal" };
 const VIEW_TITLES = {
   inbox:    "Inbox",
   today:    "Today",
+  upcoming: "Upcoming",
   all:      "All Tasks",
   shop:     "Broadway Beer Wine & Spirits",
   design:   "Design",
@@ -1450,6 +1613,8 @@ function closeAddTask() {
   document.getElementById("mt-notes").value = "";
   document.getElementById("new-area-row").classList.remove("visible");
   document.getElementById("new-section-row").classList.remove("visible");
+  modalDueDate = null;
+  updateWhenTrigger();
 }
 
 function handleOverlayClick(e) {
@@ -1477,11 +1642,17 @@ function saveNewTask() {
   dynamicTasks.push(newTask);
   saveDynamicTasks();
 
-  if (currentFilter === "today") {
-    state[newTask.id] = { today: true };
-    saveState();
+  const todaySaveStr = new Date().toLocaleDateString("en-CA");
+  const taskState = {};
+  if (currentFilter === "today") taskState.today = true;
+  if (modalDueDate) {
+    taskState.due = modalDueDate;
+    if (modalDueDate === todaySaveStr) taskState.today = true;
   }
+  if (Object.keys(taskState).length) { state[newTask.id] = taskState; saveState(); }
 
+  modalDueDate = null;
+  updateWhenTrigger();
   closeAddTask();
   render();
 }
@@ -1568,10 +1739,11 @@ function setFilter(f, btn) {
   document.getElementById('view-title').textContent = VIEW_TITLES[f] || f;
 
   // Show/hide panels
-  const panels = { 'task-content': false, 'logbook-panel': false, 'notes-panel': false };
-  if (f === 'notes')   panels['notes-panel']   = true;
-  else if (f === 'logbook') panels['logbook-panel'] = true;
-  else                 panels['task-content']   = true;
+  const panels = { 'task-content': false, 'logbook-panel': false, 'notes-panel': false, 'upcoming-panel': false };
+  if      (f === 'notes')    panels['notes-panel']    = true;
+  else if (f === 'logbook')  panels['logbook-panel']  = true;
+  else if (f === 'upcoming') panels['upcoming-panel'] = true;
+  else                       panels['task-content']   = true;
 
   Object.entries(panels).forEach(([id, show]) => {
     document.getElementById(id).style.display = show ? '' : 'none';
@@ -1583,6 +1755,8 @@ function setFilter(f, btn) {
     ta.focus();
   } else if (f === 'logbook') {
     renderLogbook();
+  } else if (f === 'upcoming') {
+    renderUpcoming();
   } else {
     render();
   }
@@ -1736,7 +1910,9 @@ function renderLogbook() {
 function taskRowHTML(t) {
   const isDone       = !!state[t.id]?.completed;
   const isOverdue    = t.tags.includes("overdue") && !isDone;
-  const isToday      = !!state[t.id]?.today && !isDone;
+  const todayRowStr  = new Date().toLocaleDateString("en-CA");
+  const dueDate      = state[t.id]?.due || null;
+  const isToday      = (!isDone) && (!!state[t.id]?.today || dueDate === todayRowStr);
   const noteOpen     = !!state[t.id]?.noteOpen && !isDone;
   const noteText     = state[t.id]?.note || "";
   const hasNote      = !!noteText;
@@ -1836,6 +2012,9 @@ function taskRowHTML(t) {
       <div class="task-body">
         <div class="task-title">${t.title}</div>
         ${t.detail ? `<div class="task-detail">${t.detail}</div>` : ""}
+        ${!isDone && dueDate && dueDate !== todayRowStr ? `<div class="task-due ${dueDate < todayRowStr ? "due-overdue" : "due-future"}">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><line x1="5" y1="1.5" x2="5" y2="4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="1.5" x2="11" y2="4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="2" y1="6.5" x2="14" y2="6.5" stroke="currentColor" stroke-width="1.2"/></svg>
+          ${formatDueLabel(dueDate)}</div>` : ""}
         ${badges}${stamp}${subHTML}${noteHTML}
       </div>
       ${actions}
@@ -1847,11 +2026,13 @@ function render() {
   const doneSec   = document.getElementById("done-section");
   const all       = allTasks();
 
+  const todayStr = new Date().toLocaleDateString("en-CA");
   const visible = all.filter(t => {
-    if (currentFilter === "today")  return !!state[t.id]?.today && !state[t.id]?.completed;
-    if (currentFilter === "inbox")  return t.area === "inbox"   && !state[t.id]?.completed;
-    if (currentFilter === "all")    return t.area !== "inbox"   && !state[t.id]?.completed;
-    return t.area === currentFilter && !state[t.id]?.completed;
+    if (state[t.id]?.completed) return false;
+    if (currentFilter === "today")  return !!state[t.id]?.today || state[t.id]?.due === todayStr;
+    if (currentFilter === "inbox")  return t.area === "inbox";
+    if (currentFilter === "all")    return t.area !== "inbox";
+    return t.area === currentFilter;
   });
 
   // Group by section
@@ -1872,11 +2053,13 @@ function render() {
 
   // Sidebar counts
   const nc = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n > 0 ? n : ""; };
-  nc("nc-inbox",    all.filter(t => t.area==="inbox"         && !state[t.id]?.completed).length);
-  nc("nc-today",    all.filter(t => !!state[t.id]?.today     && !state[t.id]?.completed).length);
-  nc("nc-shop",     all.filter(t => t.area==="shop"          && !state[t.id]?.completed).length);
-  nc("nc-design",   all.filter(t => t.area==="design"        && !state[t.id]?.completed).length);
-  nc("nc-personal", all.filter(t => t.area==="personal"      && !state[t.id]?.completed).length);
+  const todayNc = new Date().toLocaleDateString("en-CA");
+  nc("nc-inbox",    all.filter(t => t.area==="inbox" && !state[t.id]?.completed).length);
+  nc("nc-today",    all.filter(t => !state[t.id]?.completed && (!!state[t.id]?.today || state[t.id]?.due === todayNc)).length);
+  nc("nc-upcoming", all.filter(t => !state[t.id]?.completed && state[t.id]?.due && state[t.id].due > todayNc).length);
+  nc("nc-shop",     all.filter(t => t.area==="shop"    && !state[t.id]?.completed).length);
+  nc("nc-design",   all.filter(t => t.area==="design"  && !state[t.id]?.completed).length);
+  nc("nc-personal", all.filter(t => t.area==="personal"&& !state[t.id]?.completed).length);
   nc("nc-logbook",  all.filter(t => !!state[t.id]?.completed).length + (showPre ? 1 : 0));
 
   // View subtitle
@@ -1993,6 +2176,166 @@ document.addEventListener("keydown", e => {
 document.getElementById("mt-title").addEventListener("input", function() {
   document.getElementById("mt-save").disabled = !this.value.trim();
 });
+
+// ── Due dates & When picker ───────────────────────────────────────────────
+let modalDueDate = null;
+let calYear  = new Date().getFullYear();
+let calMonth = new Date().getMonth(); // 0-indexed
+
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DAYS   = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+function formatDueLabel(dateStr) {
+  if (!dateStr) return "";
+  const today = new Date().toLocaleDateString("en-CA");
+  if (dateStr === today) return "Today";
+  const d = new Date(dateStr + "T00:00:00");
+  const diff = Math.round((d - new Date(today + "T00:00:00")) / 86400000);
+  if (diff === 1)  return "Tomorrow";
+  if (diff === -1) return "Yesterday";
+  if (diff > 1 && diff < 7) return d.toLocaleDateString("en-CA", { weekday:"long" });
+  return d.toLocaleDateString("en-CA", { month:"short", day:"numeric" });
+}
+
+function updateWhenTrigger() {
+  const btn   = document.getElementById("when-trigger-btn");
+  const label = document.getElementById("when-trigger-label");
+  if (!btn) return;
+  btn.className = "when-trigger";
+  if (!modalDueDate) { label.textContent = "When?"; return; }
+  const today = new Date().toLocaleDateString("en-CA");
+  if (modalDueDate === today) {
+    label.textContent = "⭐ Today"; btn.classList.add("is-today-set");
+  } else if (modalDueDate < today) {
+    label.textContent = "⚠ " + formatDueLabel(modalDueDate); btn.classList.add("is-overdue");
+  } else {
+    label.textContent = formatDueLabel(modalDueDate); btn.classList.add("is-set");
+  }
+}
+
+function openWhenPicker() {
+  calYear  = new Date().getFullYear();
+  calMonth = new Date().getMonth();
+  if (modalDueDate) {
+    const d = new Date(modalDueDate + "T00:00:00");
+    calYear  = d.getFullYear();
+    calMonth = d.getMonth();
+  }
+  renderCalendar();
+  // Show/hide today check
+  const today = new Date().toLocaleDateString("en-CA");
+  document.getElementById("when-check-today").style.display = modalDueDate === today ? "" : "none";
+  document.getElementById("when-clear-btn").style.display = modalDueDate ? "" : "none";
+  document.getElementById("when-overlay").classList.add("open");
+}
+
+function closeWhenPicker() {
+  document.getElementById("when-overlay").classList.remove("open");
+}
+
+function handleWhenOverlayClick(e) {
+  if (e.target === document.getElementById("when-overlay")) closeWhenPicker();
+}
+
+function renderCalendar() {
+  document.getElementById("when-cal-month").textContent = MONTHS[calMonth] + " " + calYear;
+  const grid = document.getElementById("when-cal-grid");
+  // Day-of-week headers
+  let html = DAYS.map(d => `<div class="when-cal-dow">${d}</div>`).join("");
+
+  const today = new Date().toLocaleDateString("en-CA");
+  const firstDay = new Date(calYear, calMonth, 1);
+  // Monday=0 offset
+  let startOffset = (firstDay.getDay() + 6) % 7; // Mon-based
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+
+  for (let i = 0; i < startOffset; i++) html += `<button class="when-cal-day empty" disabled></button>`;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = calYear + "-" + String(calMonth+1).padStart(2,"0") + "-" + String(d).padStart(2,"0");
+    const isPast  = dateStr < today;
+    const isTodayCal = dateStr === today;
+    const isSel   = dateStr === modalDueDate;
+    let cls = "when-cal-day";
+    if (isPast)    cls += " past";
+    if (isTodayCal) cls += " today-cal";
+    if (isSel)     cls += " selected";
+    html += `<button class="${cls}" ${isPast?"disabled":""} onclick="pickWhenDate('${dateStr}')">${d}</button>`;
+  }
+  grid.innerHTML = html;
+}
+
+function calPrev() {
+  calMonth--;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  renderCalendar();
+}
+function calNext() {
+  calMonth++;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendar();
+}
+
+function pickWhenToday() {
+  const today = new Date().toLocaleDateString("en-CA");
+  modalDueDate = today;
+  updateWhenTrigger();
+  closeWhenPicker();
+}
+
+function pickWhenDate(dateStr) {
+  modalDueDate = dateStr;
+  updateWhenTrigger();
+  closeWhenPicker();
+}
+
+function clearWhenDate() {
+  modalDueDate = null;
+  updateWhenTrigger();
+  closeWhenPicker();
+}
+
+// ── Upcoming render ───────────────────────────────────────────────────────
+function renderUpcoming() {
+  const el  = document.getElementById("upcoming-main");
+  const all = allTasks();
+  const today = new Date().toLocaleDateString("en-CA");
+
+  const tasks = all.filter(t =>
+    !state[t.id]?.completed &&
+    state[t.id]?.due &&
+    state[t.id].due >= today
+  ).sort((a,b) => (state[a.id]?.due || "").localeCompare(state[b.id]?.due || ""));
+
+  if (!tasks.length) {
+    el.innerHTML = `<div class="upcoming-empty">No upcoming tasks with due dates.<br>Set a date on a task to see it here.</div>`;
+    return;
+  }
+
+  // Group by date
+  const groups = {};
+  const order  = [];
+  tasks.forEach(t => {
+    const d = state[t.id].due;
+    if (!groups[d]) { groups[d] = []; order.push(d); }
+    groups[d].push(t);
+  });
+
+  el.innerHTML = order.map(dateStr => {
+    const d       = new Date(dateStr + "T00:00:00");
+    const dayNum  = d.getDate();
+    const dayName = dateStr === today ? "Today"
+                  : d.toLocaleDateString("en-CA", { weekday:"long", month:"long" });
+    const isToday = dateStr === today;
+    return `
+      <div class="upcoming-day">
+        <div class="upcoming-day-header">
+          <span class="upcoming-day-num${isToday?" is-today":""}">${dayNum}</span>
+          <span class="upcoming-day-label">${dayName}</span>
+        </div>
+        ${groups[dateStr].map(t => taskRowHTML(t)).join("")}
+      </div>`;
+  }).join("");
+}
 
 // ── GitHub Gist Sync ─────────────────────────────────────────────────────
 const GIST_ID = "93a2cf33d825df70c7273e2c257127b6";
