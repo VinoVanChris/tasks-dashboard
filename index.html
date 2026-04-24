@@ -835,6 +835,33 @@
   .when-trigger.is-today-set { color: var(--orange); border-color: rgba(255,149,0,0.3); background: var(--orange-light); }
   .when-trigger.is-overdue   { color: var(--red);  border-color: rgba(255,59,48,0.3);  background: var(--red-light); }
 
+  /* Repeat trigger + picker */
+  .repeat-trigger {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid rgba(0,0,0,0.10); border-radius: 8px;
+    background: rgba(0,0,0,0.03); padding: 7px 12px;
+    font-family: inherit; font-size: 13px; color: var(--label3);
+    cursor: pointer; transition: border-color 0.1s, color 0.1s;
+    white-space: nowrap; margin-left: 8px;
+  }
+  .repeat-trigger:hover { border-color: var(--purple); color: var(--purple); }
+  .repeat-trigger.is-set { color: var(--purple); border-color: rgba(175,82,222,0.3); background: var(--purple-light); }
+  .repeat-picker { display: none; flex-wrap: wrap; gap: 6px; padding: 10px 0 4px; }
+  .repeat-picker.open { display: flex; }
+  .repeat-chip {
+    padding: 5px 13px; border-radius: 20px;
+    border: 1px solid var(--sep); background: transparent;
+    font-family: inherit; font-size: 13px; color: var(--label2);
+    cursor: pointer; transition: all 0.15s;
+  }
+  .repeat-chip:hover   { border-color: var(--purple); color: var(--purple); }
+  .repeat-chip.active  { background: var(--purple-light); border-color: var(--purple); color: var(--purple); font-weight: 600; }
+  /* Recur badge on task row */
+  .recur-badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 11px; color: var(--purple); margin-top: 2px;
+  }
+
   /* Due date label under task title */
   .task-due {
     font-size: 12px; font-weight: 500; color: var(--label3); margin-top: 2px;
@@ -1269,11 +1296,23 @@
         placeholder="Notes"
         rows="3"
         onkeydown="handleModalKey(event)"></textarea>
-      <div style="margin-top:12px;">
+      <div style="margin-top:12px; display:flex; align-items:center; flex-wrap:wrap; gap:0;">
         <button class="when-trigger" id="when-trigger-btn" onclick="openWhenPicker()">
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.4"/><line x1="5" y1="1.5" x2="5" y2="4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="11" y1="1.5" x2="11" y2="4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="2" y1="6.5" x2="14" y2="6.5" stroke="currentColor" stroke-width="1.2"/></svg>
           <span id="when-trigger-label">When?</span>
         </button>
+        <button class="repeat-trigger" id="repeat-trigger-btn" onclick="toggleRepeatPicker()">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9A6 6 0 1 0 3.5 4.5"/><polyline points="1,2 3.5,4.5 6,2"/></svg>
+          <span id="repeat-trigger-label">Repeat?</span>
+        </button>
+      </div>
+      <div class="repeat-picker" id="repeat-picker">
+        <button class="repeat-chip" data-recur="" onclick="setRepeat('')">None</button>
+        <button class="repeat-chip" data-recur="daily" onclick="setRepeat('daily')">Daily</button>
+        <button class="repeat-chip" data-recur="weekly" onclick="setRepeat('weekly')">Weekly</button>
+        <button class="repeat-chip" data-recur="biweekly" onclick="setRepeat('biweekly')">Every 2 Weeks</button>
+        <button class="repeat-chip" data-recur="monthly" onclick="setRepeat('monthly')">Monthly</button>
+        <button class="repeat-chip" data-recur="yearly" onclick="setRepeat('yearly')">Yearly</button>
       </div>
       <div class="modal-fields">
         <!-- Area column -->
@@ -1731,7 +1770,10 @@ function closeAddTask() {
   saveBtn.disabled = true;
   editingTaskId = null;
   modalDueDate = null;
+  modalRecur   = null;
   updateWhenTrigger();
+  updateRepeatTrigger();
+  document.getElementById("repeat-picker").classList.remove("open");
 }
 
 function handleOverlayClick(e) {
@@ -1774,6 +1816,10 @@ function openEditTask(id) {
   // Due date
   modalDueDate = state[id]?.due || null;
   updateWhenTrigger();
+
+  // Recurrence
+  modalRecur = state[id]?.recur || null;
+  updateRepeatTrigger();
 
   const saveBtn = document.getElementById("mt-save");
   saveBtn.textContent = "Save";
@@ -1826,7 +1872,11 @@ function saveEditTask() {
   } else {
     if (state[id]) { delete state[id].due; }
   }
-  saveState();
+  // Recurrence
+  if (modalRecur) state[id] = { ...(state[id] || {}), recur: modalRecur };
+  else if (state[id]) delete state[id].recur;
+
+  saveState(); schedPush();
   closeAddTask();
   render();
 }
@@ -1854,9 +1904,11 @@ function saveNewTask() {
     taskState.due = modalDueDate;
     if (modalDueDate === todaySaveStr) taskState.today = true;
   }
+  if (modalRecur) taskState.recur = modalRecur;
   if (Object.keys(taskState).length) { state[newTask.id] = taskState; saveState(); }
 
   modalDueDate = null;
+  modalRecur   = null;
   updateWhenTrigger();
   closeAddTask();
   render();
@@ -1867,9 +1919,52 @@ function saveState() {
 }
 
 function toggleTask(id) {
-  if (state[id]?.completed) delete state[id];
-  else state[id] = { completed:true, completedAt: new Date().toLocaleDateString("en-CA") };
-  saveState(); render();
+  if (state[id]?.completed) {
+    // Uncomplete — remove done flags, keep other state
+    const s = { ...(state[id] || {}) };
+    delete s.completed; delete s.completedAt;
+    state[id] = Object.keys(s).length ? s : undefined;
+    if (!state[id]) delete state[id];
+  } else {
+    const recur = state[id]?.recur;
+    state[id] = { ...(state[id] || {}), completed: true, completedAt: new Date().toLocaleDateString("en-CA") };
+    if (recur) spawnNextRecurrence(id);
+  }
+  saveState(); schedPush(); render();
+}
+
+function calcNextDue(fromDate, recur) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const base  = fromDate ? new Date(fromDate + "T00:00:00") : today;
+  const d     = new Date(base < today ? today : base);
+  switch(recur) {
+    case "daily":    d.setDate(d.getDate() + 1);       break;
+    case "weekly":   d.setDate(d.getDate() + 7);       break;
+    case "biweekly": d.setDate(d.getDate() + 14);      break;
+    case "monthly":  d.setMonth(d.getMonth() + 1);     break;
+    case "yearly":   d.setFullYear(d.getFullYear()+1); break;
+  }
+  return d.toLocaleDateString("en-CA");
+}
+
+function spawnNextRecurrence(id) {
+  const t = allTasks().find(t => t.id === id);
+  if (!t) return;
+  const recur   = state[id]?.recur;
+  const nextDue = calcNextDue(state[id]?.due || null, recur);
+  const todayStr = new Date().toLocaleDateString("en-CA");
+  const newTask = {
+    id: "recur-" + Date.now(),
+    title:   t._dynamic ? t.title   : (state[id]?.titleOverride || t.title),
+    detail:  t._dynamic ? (t.detail||"") : (state[id]?.note || t.detail || ""),
+    area:    state[id]?.areaOverride    || t.area,
+    section: state[id]?.sectionOverride || t.section,
+    tags: [], subtasks: [], _dynamic: true
+  };
+  dynamicTasks.push(newTask);
+  saveDynamicTasks();
+  state[newTask.id] = { due: nextDue, recur };
+  if (nextDue === todayStr) state[newTask.id].today = true;
 }
 
 function toggleToday(id) {
@@ -2275,6 +2370,7 @@ function taskRowHTML(t) {
       <div class="task-body">
         <div class="task-title" style="${isDone?"":"cursor:pointer"}" onclick="${isDone?"void(0)":"openEditTask('"+t.id+"')"}">${t.title}</div>
         ${t.detail ? `<div class="task-detail">${t.detail}</div>` : ""}
+        ${!isDone && state[t.id]?.recur ? `<div class="recur-badge"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9A6 6 0 1 0 3.5 4.5"/><polyline points="1,2 3.5,4.5 6,2"/></svg> ${RECUR_LABELS[state[t.id].recur]}</div>` : ""}
         ${!isDone && dueDate && dueDate !== todayRowStr ? `<div class="task-due ${dueDate < todayRowStr ? "due-overdue" : "due-future"}">
           <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><line x1="5" y1="1.5" x2="5" y2="4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="1.5" x2="11" y2="4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="2" y1="6.5" x2="14" y2="6.5" stroke="currentColor" stroke-width="1.2"/></svg>
           ${formatDueLabel(dueDate)}</div>` : ""}
@@ -2561,6 +2657,7 @@ function rebuildSidebarAreas() {
 
 // ── Due dates & When picker ─────────────────────────────────────────────
 let modalDueDate = null;
+let modalRecur   = null;
 let calYear  = new Date().getFullYear();
 let calMonth = new Date().getMonth(); // 0-indexed
 
@@ -2577,6 +2674,35 @@ function formatDueLabel(dateStr) {
   if (diff === -1) return "Yesterday";
   if (diff > 1 && diff < 7) return d.toLocaleDateString("en-CA", { weekday:"long" });
   return d.toLocaleDateString("en-CA", { month:"short", day:"numeric" });
+}
+
+const RECUR_LABELS = { daily:"Daily", weekly:"Weekly", biweekly:"Every 2 Weeks", monthly:"Monthly", yearly:"Yearly" };
+
+function toggleRepeatPicker() {
+  document.getElementById("repeat-picker").classList.toggle("open");
+}
+
+function setRepeat(val) {
+  modalRecur = val || null;
+  updateRepeatTrigger();
+  document.getElementById("repeat-picker").classList.remove("open");
+}
+
+function updateRepeatTrigger() {
+  const btn   = document.getElementById("repeat-trigger-btn");
+  const label = document.getElementById("repeat-trigger-label");
+  if (!btn) return;
+  // Update chips
+  document.querySelectorAll(".repeat-chip").forEach(c => {
+    c.classList.toggle("active", (c.dataset.recur || null) === (modalRecur || null));
+  });
+  if (modalRecur) {
+    label.textContent = RECUR_LABELS[modalRecur] || modalRecur;
+    btn.classList.add("is-set");
+  } else {
+    label.textContent = "Repeat?";
+    btn.classList.remove("is-set");
+  }
 }
 
 function updateWhenTrigger() {
