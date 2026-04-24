@@ -74,6 +74,40 @@
     padding: 22px 16px 14px;
   }
 
+  .sync-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--label4); flex-shrink: 0;
+    transition: background 0.3s;
+    cursor: pointer; margin-left: auto;
+    title: "Sync status";
+  }
+  .sync-dot.syncing  { background: var(--orange); }
+  .sync-dot.synced   { background: var(--green); }
+  .sync-dot.error    { background: var(--red); }
+
+  /* Token setup modal */
+  .token-modal {
+    display: none; position: fixed; inset: 0; z-index: 600;
+    background: rgba(0,0,0,0.4); backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    align-items: center; justify-content: center;
+  }
+  .token-modal.open { display: flex; }
+  .token-sheet {
+    background: #fff; border-radius: 14px; padding: 28px;
+    width: 400px; max-width: calc(100vw - 40px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .token-sheet h2 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .token-sheet p  { font-size: 13px; color: var(--label3); margin-bottom: 16px; line-height: 1.5; }
+  .token-input {
+    width: 100%; font-family: monospace; font-size: 13px;
+    border: 1px solid rgba(0,0,0,0.15); border-radius: 8px;
+    padding: 9px 12px; outline: none; margin-bottom: 14px;
+  }
+  .token-input:focus { border-color: var(--blue); }
+  .token-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
   .app-icon-wrap {
     width: 26px; height: 26px;
     background: var(--blue);
@@ -811,6 +845,7 @@
         </svg>
       </div>
       <span class="app-name">Tasks</span>
+      <span class="sync-dot" id="sync-dot" title="Sync" onclick="openTokenModal()"></span>
     </div>
 
     <nav class="sidebar-nav">
@@ -942,6 +977,19 @@
       <svg viewBox="0 0 20 20"><line x1="10" y1="3" x2="10" y2="17"/><line x1="3" y1="10" x2="17" y2="10"/></svg>
     </button>
   </main>
+</div>
+
+<!-- ── Token Modal ───────────────────────────────────────────────── -->
+<div class="token-modal" id="token-modal">
+  <div class="token-sheet">
+    <h2>GitHub Sync</h2>
+    <p>Enter your GitHub Personal Access Token (gist scope) once per device. Tasks will sync automatically across all your devices.</p>
+    <input class="token-input" id="token-input" type="password" placeholder="ghp_..." autocomplete="off">
+    <div class="token-actions">
+      <button class="modal-cancel-btn" onclick="closeTokenModal()">Cancel</button>
+      <button class="modal-save-btn" onclick="saveToken()">Save & Sync</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── Add Task Modal ────────────────────────────────────────────── -->
@@ -1946,9 +1994,118 @@ document.getElementById("mt-title").addEventListener("input", function() {
   document.getElementById("mt-save").disabled = !this.value.trim();
 });
 
+// ── GitHub Gist Sync ─────────────────────────────────────────────────────
+const GIST_ID = "93a2cf33d825df70c7273e2c257127b6";
+const GIST_FILE = "tasks-sync.json";
+
+function getToken() { return localStorage.getItem("tasks-gh-token") || ""; }
+
+function setSyncDot(status) {
+  const d = document.getElementById("sync-dot");
+  if (!d) return;
+  d.className = "sync-dot" + (status ? " " + status : "");
+  d.title = status === "synced" ? "Synced ✓ (click to change token)"
+          : status === "syncing" ? "Syncing…"
+          : status === "error"   ? "Sync error — click to check token"
+          : "Sync off — click to add token";
+}
+
+async function pushToGist() {
+  const token = getToken(); if (!token) return;
+  setSyncDot("syncing");
+  const payload = {
+    tasks_v2:              state,
+    tasks_dynamic:         dynamicTasks,
+    tasks_custom_areas:    customAreas,
+    tasks_custom_sections: customSections,
+    notes_pad:             localStorage.getItem("notes-pad") || ""
+  };
+  try {
+    const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      method: "PATCH",
+      headers: { Authorization: `token ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(payload) } } })
+    });
+    setSyncDot(r.ok ? "synced" : "error");
+  } catch(e) { setSyncDot("error"); }
+}
+
+async function pullFromGist() {
+  const token = getToken(); if (!token) { setSyncDot(""); return; }
+  setSyncDot("syncing");
+  try {
+    const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      headers: { Authorization: `token ${token}` }
+    });
+    if (!r.ok) { setSyncDot("error"); return; }
+    const data = await r.json();
+    const raw = data.files?.[GIST_FILE]?.content;
+    if (!raw) { setSyncDot("synced"); return; }
+    const p = JSON.parse(raw);
+    // Only overwrite if remote has data
+    if (p.tasks_v2 && Object.keys(p.tasks_v2).length > 0) {
+      state = p.tasks_v2;
+      localStorage.setItem("tasks-v2", JSON.stringify(state));
+    }
+    if (p.tasks_dynamic && p.tasks_dynamic.length > 0) {
+      dynamicTasks = p.tasks_dynamic;
+      localStorage.setItem("tasks-dynamic", JSON.stringify(dynamicTasks));
+    }
+    if (p.tasks_custom_areas) {
+      customAreas = p.tasks_custom_areas;
+      localStorage.setItem("tasks-custom-areas", JSON.stringify(customAreas));
+    }
+    if (p.tasks_custom_sections) {
+      customSections = p.tasks_custom_sections;
+      localStorage.setItem("tasks-custom-sections", JSON.stringify(customSections));
+    }
+    if (p.notes_pad) localStorage.setItem("notes-pad", p.notes_pad);
+    setSyncDot("synced");
+    render();
+  } catch(e) { setSyncDot("error"); }
+}
+
+// Debounced push — waits 1.5s after last change before pushing
+let _pushTimer = null;
+function schedPush() {
+  clearTimeout(_pushTimer);
+  _pushTimer = setTimeout(pushToGist, 1500);
+}
+
+// Patch saveState and saveDynamicTasks to trigger sync
+const _origSaveState = saveState;
+saveState = function() { _origSaveState(); schedPush(); };
+const _origSaveDynamic = saveDynamicTasks;
+saveDynamicTasks = function() { _origSaveDynamic(); schedPush(); };
+
+// Pull on focus (handles switching between devices)
+window.addEventListener("focus", pullFromGist);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") pullFromGist();
+});
+
+// Token modal
+function openTokenModal() {
+  document.getElementById("token-input").value = getToken();
+  document.getElementById("token-modal").classList.add("open");
+  setTimeout(() => document.getElementById("token-input").focus(), 50);
+}
+function closeTokenModal() {
+  document.getElementById("token-modal").classList.remove("open");
+}
+function saveToken() {
+  const t = document.getElementById("token-input").value.trim();
+  if (t) localStorage.setItem("tasks-gh-token", t);
+  else localStorage.removeItem("tasks-gh-token");
+  closeTokenModal();
+  pullFromGist();
+}
+
 loadState();
 loadCustomMeta();
 render();
+// Pull latest from Gist on load
+setTimeout(pullFromGist, 300);
 
 // ── Mobile master/detail navigation ─────────────────────────────────────
 function isMobile() { return window.innerWidth <= 640; }
