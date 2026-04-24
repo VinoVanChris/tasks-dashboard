@@ -735,18 +735,14 @@
   .when-overlay {
     display: none; position: fixed; inset: 0; z-index: 700;
     background: rgba(0,0,0,0.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-    align-items: flex-end; justify-content: center;
+    align-items: center; justify-content: center;
   }
   .when-overlay.open { display: flex; }
   .when-sheet {
-    background: #2C2C2E; border-radius: 20px 20px 0 0;
-    width: 100%; max-width: 480px;
-    padding: 20px 0 env(safe-area-inset-bottom, 24px);
-    animation: slideUp 0.22s cubic-bezier(0.4,0,0.2,1);
-  }
-  @keyframes slideUp {
-    from { transform: translateY(100%); }
-    to   { transform: translateY(0); }
+    background: #2C2C2E; border-radius: 18px;
+    width: 340px; max-width: calc(100vw - 40px);
+    padding: 20px 0 20px;
+    animation: sheetIn 0.2s cubic-bezier(0.34,1.4,0.64,1);
   }
   .when-header {
     display: flex; align-items: center; justify-content: space-between;
@@ -1195,7 +1191,7 @@
     </div>
     <div class="modal-footer">
       <button class="modal-cancel-btn" onclick="closeAddTask()">Cancel</button>
-      <button class="modal-save-btn" id="mt-save" onclick="saveNewTask()">Add Task</button>
+      <button class="modal-save-btn" id="mt-save" onclick="saveTaskModal()">Add Task</button>
     </div>
   </div>
 </div>
@@ -1610,9 +1606,15 @@ function openAddTask() {
 function closeAddTask() {
   document.getElementById("add-task-modal").classList.remove("open");
   document.getElementById("mt-title").value = "";
+  document.getElementById("mt-title").readOnly = false;
+  document.getElementById("mt-title").style.color = "";
   document.getElementById("mt-notes").value = "";
   document.getElementById("new-area-row").classList.remove("visible");
   document.getElementById("new-section-row").classList.remove("visible");
+  const saveBtn = document.getElementById("mt-save");
+  saveBtn.textContent = "Add Task";
+  saveBtn.disabled = true;
+  editingTaskId = null;
   modalDueDate = null;
   updateWhenTrigger();
 }
@@ -1624,6 +1626,91 @@ function handleOverlayClick(e) {
 function handleModalKey(e) {
   if (e.key === "Escape") { closeAddTask(); return; }
   if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { saveNewTask(); return; }
+}
+
+let editingTaskId = null;
+
+function openEditTask(id) {
+  loadCustomMeta();
+  const t = allTasks().find(t => t.id === id);
+  if (!t) return;
+  editingTaskId = id;
+
+  const isDynamic = !!t._dynamic;
+  const titleEl = document.getElementById("mt-title");
+  titleEl.value = t.title;
+  titleEl.readOnly = !isDynamic;
+  titleEl.style.color = isDynamic ? "" : "var(--label2)";
+
+  document.getElementById("mt-notes").value = state[id]?.note || t.detail || "";
+
+  // Area / section
+  const areaCol    = document.getElementById("mt-area").closest(".modal-field-col");
+  const sectionCol = document.getElementById("mt-section").closest(".modal-field-col");
+  if (isDynamic) {
+    areaCol.style.display = "";
+    sectionCol.style.display = "";
+    rebuildAreaSelect(t.area);
+    populateSections();
+    document.getElementById("mt-area").value    = t.area;
+    document.getElementById("mt-section").value = t.section;
+  } else {
+    areaCol.style.display    = "none";
+    sectionCol.style.display = "none";
+  }
+
+  // Due date
+  modalDueDate = state[id]?.due || null;
+  updateWhenTrigger();
+
+  const saveBtn = document.getElementById("mt-save");
+  saveBtn.textContent = "Save";
+  saveBtn.disabled = false;
+
+  document.getElementById("add-task-modal").classList.add("open");
+  setTimeout(() => titleEl.focus(), 30);
+}
+
+function saveTaskModal() {
+  if (editingTaskId) {
+    saveEditTask();
+  } else {
+    saveNewTask();
+  }
+}
+
+function saveEditTask() {
+  const id = editingTaskId;
+  const t  = allTasks().find(t => t.id === id);
+  if (!t) { closeAddTask(); return; }
+
+  // Update dynamic task fields
+  if (t._dynamic) {
+    const idx = dynamicTasks.findIndex(d => d.id === id);
+    if (idx > -1) {
+      dynamicTasks[idx].title   = document.getElementById("mt-title").value.trim() || dynamicTasks[idx].title;
+      dynamicTasks[idx].detail  = document.getElementById("mt-notes").value.trim();
+      dynamicTasks[idx].area    = document.getElementById("mt-area").value;
+      dynamicTasks[idx].section = document.getElementById("mt-section").value;
+      saveDynamicTasks();
+    }
+  } else {
+    // Static task: save notes to state
+    const noteVal = document.getElementById("mt-notes").value.trim();
+    state[id] = { ...(state[id] || {}), note: noteVal };
+  }
+
+  // Due date
+  const todaySaveStr = new Date().toLocaleDateString("en-CA");
+  if (modalDueDate) {
+    state[id] = { ...(state[id] || {}), due: modalDueDate };
+    if (modalDueDate === todaySaveStr) state[id].today = true;
+  } else {
+    if (state[id]) { delete state[id].due; }
+  }
+  saveState();
+  closeAddTask();
+  render();
 }
 
 function saveNewTask() {
@@ -2010,7 +2097,7 @@ function taskRowHTML(t) {
         <div class="check-circle">${checkSVG}</div>
       </div>
       <div class="task-body">
-        <div class="task-title">${t.title}</div>
+        <div class="task-title" style="${isDone?"":"cursor:pointer"}" onclick="${isDone?"void(0)":"openEditTask('"+t.id+"')"}">${t.title}</div>
         ${t.detail ? `<div class="task-detail">${t.detail}</div>` : ""}
         ${!isDone && dueDate && dueDate !== todayRowStr ? `<div class="task-due ${dueDate < todayRowStr ? "due-overdue" : "due-future"}">
           <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><line x1="5" y1="1.5" x2="5" y2="4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="1.5" x2="11" y2="4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="2" y1="6.5" x2="14" y2="6.5" stroke="currentColor" stroke-width="1.2"/></svg>
