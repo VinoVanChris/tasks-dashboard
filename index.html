@@ -571,6 +571,23 @@
     min-width: 18px; height: 16px; padding: 0 5px;
   }
 
+  /* ── NL parse preview ───────────────────────────────────────────────── */
+  .nl-preview {
+    display: flex; flex-wrap: wrap; gap: 5px; padding: 6px 0 2px;
+    min-height: 0;
+  }
+  .nl-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 9px; border-radius: 20px; font-size: 12px; font-weight: 500;
+    border: none; cursor: pointer; transition: opacity 0.15s;
+  }
+  .nl-chip:hover { opacity: 0.7; }
+  .nl-chip.nl-due     { background: var(--blue-light);   color: var(--blue); }
+  .nl-chip.nl-recur   { background: var(--purple-light); color: var(--purple); }
+  .nl-chip.nl-urgent  { background: var(--red-light);    color: var(--red); }
+  .nl-chip.nl-high    { background: var(--orange-light); color: var(--orange); }
+  .nl-chip .nl-x      { font-size: 14px; line-height: 1; margin-left: 2px; }
+
   /* ── Project list (area drill-down) ─────────────────────────────────── */
   .project-list { padding: 8px 16px 80px; }
   .project-card {
@@ -587,6 +604,12 @@
   .project-card-name  { font-size: 16px; font-weight: 600; color: var(--label); }
   .project-card-count { font-size: 13px; color: var(--label3); margin-top: 2px; }
   .project-card-arrow { color: var(--label4); flex-shrink: 0; margin-left: 8px; }
+  .project-card.dragging  { opacity: 0.4; }
+  .project-card.drag-over { border-top: 2px solid var(--blue); }
+  .project-drag-handle {
+    color: var(--label4); flex-shrink: 0; cursor: grab; margin-right: 4px;
+    display: flex; align-items: center;
+  }
 
   /* ── Drag to reorder ─────────────────────────────────────────────────── */
   .drag-handle {
@@ -1394,8 +1417,10 @@
   <div class="modal-sheet" role="dialog" aria-modal="true" aria-label="New task">
     <div class="modal-body">
       <input class="modal-title-input" id="mt-title" type="text"
-        placeholder="New task"
+        placeholder="New task — try 'Call supplier tomorrow weekly'"
+        oninput="onTitleInput(this.value)"
         onkeydown="handleModalKey(event)">
+      <div class="nl-preview" id="nl-preview"></div>
       <div class="modal-divider"></div>
       <textarea class="modal-notes-input" id="mt-notes"
         placeholder="Notes"
@@ -1908,6 +1933,7 @@ function closeAddTask() {
   document.getElementById("mt-title").value = "";
   document.getElementById("mt-title").readOnly = false;
   document.getElementById("mt-title").style.color = "";
+  document.getElementById("nl-preview").innerHTML = "";
   document.getElementById("mt-notes").value = "";
   document.getElementById("new-area-row").classList.remove("visible");
   document.getElementById("new-section-row").classList.remove("visible");
@@ -2255,26 +2281,37 @@ function renderAreaProjects(areaName) {
   document.getElementById("done-section").innerHTML = "";
   document.getElementById("task-content").classList.remove("draggable-view");
 
-  const entries = Object.entries(secMap);
-  if (!entries.length) {
+  if (!Object.keys(secMap).length) {
     mainTasks.innerHTML = `<div class="inbox-empty"><div class="inbox-empty-icon">📂</div>No projects yet</div>`;
     return;
   }
 
+  // Apply stored project order
+  const storedOrder = state._projectOrder?.[areaName];
+  let entries = Object.keys(secMap);
+  if (storedOrder) {
+    entries = [...storedOrder.filter(s => secMap[s]), ...entries.filter(s => !storedOrder.includes(s))];
+  }
+
   const folderSVG = `<svg viewBox="0 0 20 16" width="20" height="16" fill="none"><path d="M1 3.5A1.5 1.5 0 012.5 2H7l2 2h8.5A1.5 1.5 0 0119 5.5V13a1.5 1.5 0 01-1.5 1.5h-15A1.5 1.5 0 011 13V3.5z" stroke="currentColor" stroke-width="1.5"/></svg>`;
   const chevSVG  = `<svg viewBox="0 0 8 14" width="8" height="14" fill="none"><polyline points="1,1 7,7 1,13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const gripSVG  = `<svg viewBox="0 0 10 16" width="10" height="16" fill="currentColor"><circle cx="3" cy="3" r="1.5"/><circle cx="7" cy="3" r="1.5"/><circle cx="3" cy="8" r="1.5"/><circle cx="7" cy="8" r="1.5"/><circle cx="3" cy="13" r="1.5"/><circle cx="7" cy="13" r="1.5"/></svg>`;
 
   mainTasks.innerHTML = `<div class="project-list">${
-    entries.map(([name, count]) => `
-      <button class="project-card" onclick="enterSection('${name.replace(/'/g,"\\'")}','${areaName.replace(/'/g,"\\'")}')">
+    entries.map(name => {
+      const count = secMap[name];
+      return `<button class="project-card" data-proj="${name.replace(/"/g,'&quot;')}" onclick="enterSection('${name.replace(/'/g,"\\'")}','${areaName.replace(/'/g,"\\'")}')">
+        <div class="project-drag-handle" onclick="event.stopPropagation()">${gripSVG}</div>
         <div class="project-card-icon">${folderSVG}</div>
         <div class="project-card-body">
           <div class="project-card-name">${name}</div>
           <div class="project-card-count">${count} task${count!==1?'s':''}</div>
         </div>
         <div class="project-card-arrow">${chevSVG}</div>
-      </button>`).join("")
+      </button>`;
+    }).join("")
   }</div>`;
+  setTimeout(initProjectDragHandlers, 40);
 }
 
 function enterSection(secName, areaName) {
@@ -3224,6 +3261,184 @@ function mobileGoBack() {
   currentSectionCtx = null;
   document.querySelector(".sidebar").classList.remove("mobile-hidden");
   document.getElementById("main-panel").classList.remove("mobile-visible");
+}
+
+// ── Natural language task input ──────────────────────────────────────────
+function parseNaturalTask(input) {
+  let text = input;
+  let due = null, recur = null, priority = null;
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // Recurrence (check before dates)
+  const recurMap = [
+    { re: /\bevery\s+day\b|\bdaily\b/i,                              val: 'daily' },
+    { re: /\bevery\s+2\s+weeks?\b|\bbiweekly\b|\bfortnightly\b/i,   val: 'biweekly' },
+    { re: /\bevery\s+(mon|tue|wed|thu|fri|sat|sun)\w*\b|\bevery\s+week\b|\bweekly\b/i, val: 'weekly' },
+    { re: /\bevery\s+month\b|\bmonthly\b/i,                          val: 'monthly' },
+    { re: /\bevery\s+year\b|\byearly\b|\bannually\b/i,               val: 'yearly' },
+  ];
+  for (const { re, val } of recurMap) {
+    if (re.test(text)) { recur = val; text = text.replace(re, ''); break; }
+  }
+
+  // Due dates
+  const dueMap = [
+    { re: /\btoday\b/i,       fn: () => new Date(today) },
+    { re: /\btomorrow\b/i,    fn: () => { const d=new Date(today); d.setDate(d.getDate()+1); return d; } },
+    { re: /\bthis\s+weekend\b|\bweekend\b/i, fn: () => {
+      const d=new Date(today); const ds=d.getDay(); d.setDate(d.getDate()+(ds===6?7:6-ds)); return d;
+    }},
+    { re: /\bnext\s+week\b/i, fn: () => { const d=new Date(today); d.setDate(d.getDate()+7); return d; } },
+    { re: /\bnext\s+month\b/i,fn: () => { const d=new Date(today); d.setMonth(d.getMonth()+1); d.setDate(1); return d; } },
+    { re: /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i, fn: m => {
+      const dw={sunday:0,monday:1,tuesday:2,wednesday:3,thursday:4,friday:5,saturday:6};
+      const d=new Date(today); const tgt=dw[m[1].toLowerCase()]; let diff=tgt-d.getDay(); if(diff<=0) diff+=7;
+      d.setDate(d.getDate()+diff); return d;
+    }},
+    { re: /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\.?\s+(\d{1,2})\b/i, fn: m => {
+      const mo={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+      const d=new Date(today.getFullYear(), mo[m[1].slice(0,3).toLowerCase()], parseInt(m[2]));
+      if(d<today) d.setFullYear(d.getFullYear()+1); return d;
+    }},
+  ];
+  for (const { re, fn } of dueMap) {
+    const m = text.match(re);
+    if (m) { due = fn(m).toLocaleDateString('en-CA'); text = text.replace(re, ''); break; }
+  }
+
+  // Priority
+  if (/!urgent\b/i.test(text)) { priority='urgent'; text=text.replace(/!urgent\b/i,''); }
+  else if (/!high\b/i.test(text)) { priority='high'; text=text.replace(/!high\b/i,''); }
+
+  text = text.replace(/\s*,\s*$/, '').replace(/\s{2,}/g, ' ').trim();
+  return { title: text || input.trim(), due, recur, priority };
+}
+
+let _nlApplied = { due: null, recur: null, priority: null };
+
+function onTitleInput(val) {
+  const saveBtn = document.getElementById("mt-save");
+  if (saveBtn) saveBtn.disabled = !val.trim();
+
+  // Don't parse when editing existing tasks
+  if (editingTaskId) return;
+
+  const parsed = parseNaturalTask(val);
+  const preview = document.getElementById("nl-preview");
+  const chips = [];
+
+  if (parsed.due) {
+    chips.push(`<button class="nl-chip nl-due" onclick="nlClear('due')" title="Remove">📅 ${formatDueLabel(parsed.due)} <span class="nl-x">×</span></button>`);
+  }
+  if (parsed.recur) {
+    chips.push(`<button class="nl-chip nl-recur" onclick="nlClear('recur')" title="Remove">↻ ${RECUR_LABELS[parsed.recur]} <span class="nl-x">×</span></button>`);
+  }
+  if (parsed.priority === 'urgent') {
+    chips.push(`<button class="nl-chip nl-urgent" onclick="nlClear('priority')" title="Remove">● Urgent <span class="nl-x">×</span></button>`);
+  } else if (parsed.priority === 'high') {
+    chips.push(`<button class="nl-chip nl-high" onclick="nlClear('priority')" title="Remove">● High <span class="nl-x">×</span></button>`);
+  }
+
+  preview.innerHTML = chips.join('');
+
+  // Apply parsed values to modal state
+  _nlApplied = { due: parsed.due, recur: parsed.recur, priority: parsed.priority };
+  if (parsed.due    !== null) { modalDueDate = parsed.due;      updateWhenTrigger(); }
+  if (parsed.recur  !== null) { modalRecur   = parsed.recur;    updateRepeatTrigger(); }
+  if (parsed.priority !== null) { modalPriority = parsed.priority; setModalPriority(parsed.priority); }
+}
+
+function nlClear(field) {
+  _nlApplied[field] = null;
+  if (field === 'due')      { modalDueDate  = null; updateWhenTrigger(); }
+  if (field === 'recur')    { modalRecur    = null; updateRepeatTrigger(); }
+  if (field === 'priority') { modalPriority = null; setModalPriority(''); }
+  // Re-parse without that field by clearing it from text is complex; just refresh preview
+  onTitleInput(document.getElementById("mt-title").value);
+}
+
+// ── Project drag-to-reorder ───────────────────────────────────────────────
+let _projDragName = null;
+
+function initProjectDragHandlers() {
+  document.querySelectorAll(".project-card[data-proj]").forEach(card => {
+    card.draggable = true;
+    card.addEventListener("dragstart", function() { _projDragName = this.dataset.proj; this.classList.add("dragging"); });
+    card.addEventListener("dragover",  function(e) { e.preventDefault(); document.querySelectorAll(".project-card.drag-over").forEach(c=>c.classList.remove("drag-over")); this.classList.add("drag-over"); });
+    card.addEventListener("dragleave", function() { this.classList.remove("drag-over"); });
+    card.addEventListener("drop",      function(e) { e.preventDefault(); this.classList.remove("drag-over"); reorderProjects(_projDragName, this.dataset.proj); });
+    card.addEventListener("dragend",   function() { _projDragName=null; document.querySelectorAll(".project-card").forEach(c=>c.classList.remove("dragging","drag-over")); });
+    // Touch
+    card.addEventListener("touchstart", _projTouchStart, { passive:true });
+    card.addEventListener("touchmove",  _projTouchMove,  { passive:false });
+    card.addEventListener("touchend",   _projTouchEnd);
+  });
+}
+
+let _projTouchDrag = { active: false };
+function _projTouchStart(e) {
+  const name = this.dataset.proj; const card = this; const touch = e.touches[0];
+  _projTouchDrag = { active:false, name, card, startX:touch.clientX, startY:touch.clientY, timer:null };
+  _projTouchDrag.timer = setTimeout(() => {
+    const rect = card.getBoundingClientRect();
+    const ph = document.createElement("div");
+    ph.style.cssText = `height:${rect.height}px;border-radius:12px;background:var(--blue-light);border:2px dashed var(--blue);margin-bottom:8px`;
+    card.after(ph);
+    Object.assign(card.style, {position:"fixed",left:rect.left+"px",top:rect.top+"px",width:rect.width+"px",zIndex:"999",opacity:"0.85",boxShadow:"0 8px 24px rgba(0,0,0,0.18)"});
+    _projTouchDrag = { ..._projTouchDrag, active:true, ph, offsetY: touch.clientY-rect.top };
+    if (navigator.vibrate) navigator.vibrate(50);
+  }, 420);
+}
+function _projTouchMove(e) {
+  if (!_projTouchDrag.name) return;
+  if (!_projTouchDrag.active) {
+    const t=e.touches[0];
+    if (Math.abs(t.clientX-_projTouchDrag.startX)>8||Math.abs(t.clientY-_projTouchDrag.startY)>8) { clearTimeout(_projTouchDrag.timer); _projTouchDrag={active:false}; }
+    return;
+  }
+  e.preventDefault();
+  const t=e.touches[0];
+  _projTouchDrag.card.style.top=(t.clientY-_projTouchDrag.offsetY)+"px";
+  _projTouchDrag.card.style.display="none";
+  const el=document.elementFromPoint(t.clientX,t.clientY);
+  _projTouchDrag.card.style.display="";
+  const target=el?.closest(".project-card[data-proj]");
+  if(target&&target!==_projTouchDrag.card){ _projTouchDrag.dropName=target.dataset.proj; target.after(_projTouchDrag.ph); }
+}
+function _projTouchEnd() {
+  if (!_projTouchDrag.name) return;
+  clearTimeout(_projTouchDrag.timer);
+  if (_projTouchDrag.active) {
+    const card=_projTouchDrag.card;
+    _projTouchDrag.ph?.remove();
+    Object.assign(card.style,{position:"",left:"",top:"",width:"",zIndex:"",opacity:"",boxShadow:""});
+    if (_projTouchDrag.dropName) reorderProjects(_projTouchDrag.name, _projTouchDrag.dropName);
+  }
+  _projTouchDrag={active:false};
+}
+
+function reorderProjects(fromName, toName) {
+  if (!fromName || !toName || fromName === toName) return;
+  const all = allTasks();
+  const tA  = t => state[t.id]?.areaOverride    || t.area;
+  const tS  = t => state[t.id]?.sectionOverride || t.section;
+  // Get all sections for this area
+  const secSet = [];
+  all.filter(t => !state[t.id]?.completed && tA(t) === currentFilter)
+     .forEach(t => { const s=tS(t); if(!secSet.includes(s)) secSet.push(s); });
+  // Apply stored order first
+  const stored = state._projectOrder?.[currentFilter];
+  let order = stored ? [...stored] : secSet;
+  // Ensure all current sections are represented
+  secSet.forEach(s => { if(!order.includes(s)) order.push(s); });
+  const from = order.indexOf(fromName), to = order.indexOf(toName);
+  if (from < 0 || to < 0) return;
+  order.splice(from,1); order.splice(to,0,fromName);
+  if (!state._projectOrder) state._projectOrder = {};
+  state._projectOrder[currentFilter] = order;
+  saveState(); schedPush();
+  renderAreaProjects(currentFilter);
+  setTimeout(initProjectDragHandlers, 40);
 }
 
 // ── Search ───────────────────────────────────────────────────────────────
