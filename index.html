@@ -895,14 +895,24 @@
   .mobile-back-btn { display: none; }
 
   @media (max-width: 640px) {
+    /* Lock html/body so iOS keyboard resize can't reflow the app shell */
+    html, body {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
     body { padding: 0; background: var(--sidebar-bg); }
 
     .app {
       max-width: 100%;
-      height: 100vh;
+      /* Use fixed + inset:0 so the iOS keyboard can't shrink us */
+      position: fixed;
+      inset: 0;
+      height: 100%;
       border-radius: 0;
       box-shadow: none;
-      position: relative;
       overflow: hidden;
     }
 
