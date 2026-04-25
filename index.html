@@ -801,6 +801,42 @@
   }
   .modal-notes-input::placeholder { color: var(--label4); }
 
+  /* Subtasks in modal */
+  .modal-subtasks-section { padding: 2px 0; }
+  .modal-subtask-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 0; border-bottom: 0.5px solid var(--sep2);
+  }
+  .modal-subtask-check {
+    width: 16px; height: 16px; flex-shrink: 0; accent-color: var(--blue);
+  }
+  .modal-subtask-label {
+    flex: 1; font-size: 14px; color: var(--label2); line-height: 1.35;
+  }
+  .modal-subtask-label.static-sub { color: var(--label3); font-style: italic; }
+  .modal-subtask-del {
+    background: none; border: none; color: var(--label4);
+    font-size: 16px; cursor: pointer; padding: 0 2px; line-height: 1;
+    flex-shrink: 0;
+  }
+  .modal-subtask-del:hover { color: var(--red); }
+  .modal-add-subtask-row {
+    display: flex; align-items: center; gap: 8px; padding-top: 6px;
+  }
+  .modal-subtask-input {
+    flex: 1; border: none; outline: none; font-family: inherit;
+    font-size: 14px; color: var(--label); background: transparent;
+    padding: 2px 0;
+  }
+  .modal-subtask-input::placeholder { color: var(--label4); }
+  .modal-subtask-add-btn {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 1.5px solid var(--sep); background: none;
+    color: var(--label3); font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; line-height: 1;
+  }
+  .modal-subtask-add-btn:hover { border-color: var(--blue); color: var(--blue); }
+
   .modal-fields { display: flex; gap: 10px; margin-top: 16px; }
 
   .modal-field-col { flex: 1; display: flex; flex-direction: column; gap: 6px; }
@@ -1483,6 +1519,17 @@
         placeholder="Notes"
         rows="3"
         onkeydown="handleModalKey(event)"></textarea>
+      <div class="modal-divider" style="margin:10px 0 8px"></div>
+      <div class="modal-subtasks-section" id="modal-subtasks-section">
+        <div class="modal-subtask-list" id="modal-subtask-list"></div>
+        <div class="modal-add-subtask-row">
+          <input type="text" class="modal-subtask-input" id="modal-new-subtask"
+            placeholder="Add a step…"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();addModalSubtask();}">
+          <button class="modal-subtask-add-btn" onclick="addModalSubtask()">+</button>
+        </div>
+      </div>
+      <div class="modal-divider" style="margin:10px 0 4px"></div>
       <div style="margin-top:12px; display:flex; align-items:center; flex-wrap:wrap; gap:0;">
         <button class="when-trigger" id="when-trigger-btn" onclick="openWhenPicker()">
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.4"/><line x1="5" y1="1.5" x2="5" y2="4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="11" y1="1.5" x2="11" y2="4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="2" y1="6.5" x2="14" y2="6.5" stroke="currentColor" stroke-width="1.2"/></svg>
@@ -2021,6 +2068,8 @@ function closeAddTask() {
   modalRecur    = null;
   modalPriority = null;
   modalDefer    = null;
+  modalSubtasks = [];
+  renderModalSubtasks();
   updateWhenTrigger();
   updateRepeatTrigger();
   setModalPriority('');
@@ -2081,6 +2130,10 @@ function openEditTask(id) {
   // Defer
   modalDefer = state[id]?.defer || null;
   updateDeferTrigger();
+
+  // Subtasks — static (read-only) + dynamic (editable)
+  modalSubtasks = [...(state[id]?.dynamicSubtasks || [])];
+  renderModalSubtasks(t.subtasks || []);
 
   const saveBtn = document.getElementById("mt-save");
   saveBtn.textContent = "Save";
@@ -2145,6 +2198,10 @@ function saveEditTask() {
   // Defer
   if (modalDefer) state[id] = { ...(state[id] || {}), defer: modalDefer };
   else if (state[id]) delete state[id].defer;
+  // Dynamic subtasks
+  state[id] = { ...(state[id] || {}) };
+  if (modalSubtasks.length) state[id].dynamicSubtasks = modalSubtasks;
+  else delete state[id].dynamicSubtasks;
 
   saveState(); schedPush();
   closeAddTask();
@@ -3128,6 +3185,7 @@ let modalDueDate    = null;
 let modalRecur      = null;
 let modalPriority   = null;
 let modalDefer      = null;
+let modalSubtasks   = [];
 let calYear  = new Date().getFullYear();
 let calMonth = new Date().getMonth(); // 0-indexed
 
@@ -3211,6 +3269,40 @@ function updateDeferTrigger() {
     label.textContent = "Defer?";
     btn.classList.remove("is-set");
   }
+}
+
+function renderModalSubtasks(staticSubs) {
+  staticSubs = staticSubs || [];
+  const list = document.getElementById("modal-subtask-list");
+  if (!list) return;
+  const staticRows = staticSubs.map((sub, i) => `
+    <div class="modal-subtask-row">
+      <span class="modal-subtask-label static-sub">${sub}</span>
+    </div>`).join("");
+  const dynRows = modalSubtasks.map((sub, i) => `
+    <div class="modal-subtask-row">
+      <span class="modal-subtask-label">${sub}</span>
+      <button class="modal-subtask-del" onclick="removeModalSubtask(${i})" title="Remove">×</button>
+    </div>`).join("");
+  list.innerHTML = staticRows + dynRows;
+}
+
+function addModalSubtask() {
+  const input = document.getElementById("modal-new-subtask");
+  const val = input.value.trim();
+  if (!val) return;
+  modalSubtasks.push(val);
+  input.value = "";
+  // re-render with current static subs (stored on the task being edited)
+  const t = editingTaskId ? allTasks().find(t => t.id === editingTaskId) : null;
+  renderModalSubtasks(t?.subtasks || []);
+  input.focus();
+}
+
+function removeModalSubtask(i) {
+  modalSubtasks.splice(i, 1);
+  const t = editingTaskId ? allTasks().find(t => t.id === editingTaskId) : null;
+  renderModalSubtasks(t?.subtasks || []);
 }
 
 function setModalPriority(val) {
