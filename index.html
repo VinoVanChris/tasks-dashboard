@@ -350,6 +350,19 @@
   .section-group.collapsed .section-chevron { transform: rotate(-90deg); }
   .section-group.collapsed .section-tasks   { display: none; }
 
+  /* ── Rename pencil buttons ───────────────────────────────────────── */
+  .rename-btn {
+    background: none; border: none; cursor: pointer; padding: 3px 5px;
+    color: var(--label4); border-radius: 5px; opacity: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.15s, color 0.15s; flex-shrink: 0;
+  }
+  .rename-btn svg { width: 12px; height: 12px; }
+  .rename-btn:hover { color: var(--blue); }
+  .nav-item:hover .rename-btn,
+  .project-card:hover .rename-btn { opacity: 1; }
+  @media (max-width: 640px) { .rename-btn { opacity: 0.5; } }
+
   .section-tasks { padding: 2px 0; }
 
   /* ── Task rows ───────────────────────────────────────────────────────── */
@@ -1249,23 +1262,7 @@
 
     <div class="sidebar-section-label">Areas</div>
 
-    <nav class="sidebar-nav">
-      <button class="nav-item" onclick="setFilter('shop',this)">
-        <span class="area-dot-nav adn-shop"></span>
-        <span class="nav-label">Broadway Beer Wine</span>
-        <span class="nav-count" id="nc-shop"></span>
-      </button>
-      <button class="nav-item" onclick="setFilter('design',this)">
-        <span class="area-dot-nav adn-design"></span>
-        <span class="nav-label">Design</span>
-        <span class="nav-count" id="nc-design"></span>
-      </button>
-      <button class="nav-item" onclick="setFilter('personal',this)">
-        <span class="area-dot-nav adn-personal"></span>
-        <span class="nav-label">Personal</span>
-        <span class="nav-count" id="nc-personal"></span>
-      </button>
-    </nav>
+    <nav class="sidebar-nav" id="builtin-areas-nav"></nav>
 
     <!-- Custom areas injected here -->
     <nav class="sidebar-nav" id="custom-areas-nav"></nav>
@@ -1382,6 +1379,19 @@
     <div class="quick-actions">
       <button class="modal-cancel-btn" onclick="closeNewAreaModal()">Cancel</button>
       <button class="modal-save-btn" onclick="confirmQuickArea()">Add Area</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Rename Modal ──────────────────────────────────────────────── -->
+<div class="quick-modal" id="rename-modal">
+  <div class="quick-sheet">
+    <h3 id="rename-modal-title">Rename</h3>
+    <input class="quick-input" id="rename-input" type="text" placeholder="New name…"
+      onkeydown="if(event.key==='Enter')confirmRename();if(event.key==='Escape')closeRenameModal()">
+    <div class="quick-actions">
+      <button class="modal-cancel-btn" onclick="closeRenameModal()">Cancel</button>
+      <button class="modal-save-btn" onclick="confirmRename()">Rename</button>
     </div>
   </div>
 </div>
@@ -1824,16 +1834,34 @@ const BASE_SECTIONS = {
   personal: ["Personal"]
 };
 
-let customAreas    = [];          // [{id, label}]  stored in 'tasks-custom-areas'
-let customSections = {};          // {areaId: [label, ...]}  stored in 'tasks-custom-sections'
+let customAreas        = [];   // [{id, label}]
+let customSections     = {};   // {areaId: [label, ...]}
+let areaNameOverrides  = {};   // {areaId: newLabel} — renames for any area
+let sectionNameOverrides = {}; // {areaId: {oldName: newName}}
 
 function loadCustomMeta() {
-  try { customAreas    = JSON.parse(localStorage.getItem("tasks-custom-areas")    || "[]"); } catch(e) { customAreas = []; }
-  try { customSections = JSON.parse(localStorage.getItem("tasks-custom-sections") || "{}"); } catch(e) { customSections = {}; }
+  try { customAreas          = JSON.parse(localStorage.getItem("tasks-custom-areas")      || "[]"); } catch(e) { customAreas = []; }
+  try { customSections       = JSON.parse(localStorage.getItem("tasks-custom-sections")   || "{}"); } catch(e) { customSections = {}; }
+  try { areaNameOverrides    = JSON.parse(localStorage.getItem("tasks-area-renames")      || "{}"); } catch(e) { areaNameOverrides = {}; }
+  try { sectionNameOverrides = JSON.parse(localStorage.getItem("tasks-section-renames")   || "{}"); } catch(e) { sectionNameOverrides = {}; }
 }
 function saveCustomMeta() {
-  localStorage.setItem("tasks-custom-areas",    JSON.stringify(customAreas));
-  localStorage.setItem("tasks-custom-sections", JSON.stringify(customSections));
+  localStorage.setItem("tasks-custom-areas",     JSON.stringify(customAreas));
+  localStorage.setItem("tasks-custom-sections",  JSON.stringify(customSections));
+  localStorage.setItem("tasks-area-renames",     JSON.stringify(areaNameOverrides));
+  localStorage.setItem("tasks-section-renames",  JSON.stringify(sectionNameOverrides));
+}
+
+function getAreaLabel(id) {
+  if (areaNameOverrides[id]) return areaNameOverrides[id];
+  if (id === "shop")     return "Broadway Beer Wine";
+  if (id === "design")   return "Design";
+  if (id === "personal") return "Personal";
+  if (id === "inbox")    return "Inbox";
+  return customAreas.find(a => a.id === id)?.label || id;
+}
+function getSectionLabel(areaId, name) {
+  return sectionNameOverrides[areaId]?.[name] || name;
 }
 
 function sectionsForArea(areaId) {
@@ -2312,14 +2340,18 @@ function renderAreaProjects(areaName) {
   const chevSVG  = `<svg viewBox="0 0 8 14" width="8" height="14" fill="none"><polyline points="1,1 7,7 1,13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   const gripSVG  = `<svg viewBox="0 0 10 16" width="10" height="16" fill="currentColor"><circle cx="3" cy="3" r="1.5"/><circle cx="7" cy="3" r="1.5"/><circle cx="3" cy="8" r="1.5"/><circle cx="7" cy="8" r="1.5"/><circle cx="3" cy="13" r="1.5"/><circle cx="7" cy="13" r="1.5"/></svg>`;
 
+  const renamePencil = `<button class="rename-btn" onclick="openRenameSection('${areaName.replace(/'/g,"\\'")}',arguments[0] || name, event)" title="Rename project" style="margin-left:4px">${pencilSVG}</button>`;
   mainTasks.innerHTML = `<div class="project-list">${
     entries.map(name => {
       const count = secMap[name];
-      return `<button class="project-card" data-proj="${name.replace(/"/g,'&quot;')}" onclick="enterSection('${name.replace(/'/g,"\\'")}','${areaName.replace(/'/g,"\\'")}')">
+      const displayName = getSectionLabel(areaName, name);
+      const safeName = name.replace(/'/g,"\\'");
+      const safeArea = areaName.replace(/'/g,"\\'");
+      return `<button class="project-card" data-proj="${name.replace(/"/g,'&quot;')}" onclick="enterSection('${safeName}','${safeArea}')">
         <div class="project-drag-handle" onclick="event.stopPropagation()">${gripSVG}</div>
         <div class="project-card-icon">${folderSVG}</div>
         <div class="project-card-body">
-          <div class="project-card-name">${name}</div>
+          <div class="project-card-name" style="display:flex;align-items:center;gap:4px">${displayName}<button class="rename-btn" onclick="openRenameSection('${safeArea}','${safeName}',event)" title="Rename project">${pencilSVG}</button></div>
           <div class="project-card-count">${count} task${count!==1?'s':''}</div>
         </div>
         <div class="project-card-arrow">${chevSVG}</div>
@@ -2726,7 +2758,7 @@ function render() {
       lastArea = sec.area;
       areaHeader = `
         <div class="area-title">
-          <span class="area-title-text">${sec.area === "shop" ? "Shop" : sec.area === "design" ? "Design" : "Personal"}</span>
+          <span class="area-title-text">${getAreaLabel(sec.area)}</span>
           <div class="area-title-rule"></div>
         </div>`;
     }
@@ -2734,7 +2766,7 @@ function render() {
     return `${areaHeader}
       <div class="section-group" id="${cardId}">
         <div class="section-header" onclick="toggleSection('${cardId}')">
-          <span class="section-name">${sec.name}</span>
+          <span class="section-name">${getSectionLabel(sec.area, sec.name)}</span>
           <div class="section-right">
             <span class="section-open-count">${openN}</span>
             <div class="section-chevron"><svg viewBox="0 0 10 10"><polyline points="2,4 5,7 8,4"/></svg></div>
@@ -2868,16 +2900,87 @@ function confirmQuickArea() {
   render();
 }
 
+// ── Rename ────────────────────────────────────────────────────────────────
+let _renameCtx = null; // { type:'area'|'section', areaId, sectionName }
+const pencilSVG = `<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z"/></svg>`;
+
+function openRenameArea(areaId, e) {
+  e.stopPropagation();
+  _renameCtx = { type: 'area', areaId };
+  document.getElementById("rename-modal-title").textContent = "Rename Area";
+  document.getElementById("rename-input").value = getAreaLabel(areaId);
+  document.getElementById("rename-modal").classList.add("open");
+  setTimeout(() => { const el = document.getElementById("rename-input"); el.focus(); el.select(); }, 50);
+}
+function openRenameSection(areaId, sectionName, e) {
+  e.stopPropagation();
+  _renameCtx = { type: 'section', areaId, sectionName };
+  document.getElementById("rename-modal-title").textContent = "Rename Project";
+  document.getElementById("rename-input").value = getSectionLabel(areaId, sectionName);
+  document.getElementById("rename-modal").classList.add("open");
+  setTimeout(() => { const el = document.getElementById("rename-input"); el.focus(); el.select(); }, 50);
+}
+function closeRenameModal() {
+  document.getElementById("rename-modal").classList.remove("open");
+  _renameCtx = null;
+}
+function confirmRename() {
+  const val = document.getElementById("rename-input").value.trim();
+  if (!val || !_renameCtx) { closeRenameModal(); return; }
+  if (_renameCtx.type === 'area') {
+    const id = _renameCtx.areaId;
+    areaNameOverrides[id] = val;
+    // Also update customAreas label if it's a custom area
+    const ca = customAreas.find(a => a.id === id);
+    if (ca) ca.label = val;
+    saveCustomMeta();
+    rebuildSidebarAreas();
+    render();
+  } else {
+    const { areaId, sectionName } = _renameCtx;
+    if (!sectionNameOverrides[areaId]) sectionNameOverrides[areaId] = {};
+    sectionNameOverrides[areaId][sectionName] = val;
+    // Also update customSections if it's a custom section
+    if (customSections[areaId]) {
+      const idx = customSections[areaId].indexOf(sectionName);
+      if (idx > -1) customSections[areaId][idx] = val;
+      // Move override to new canonical name
+      sectionNameOverrides[areaId][val] = val;
+      delete sectionNameOverrides[areaId][sectionName];
+    }
+    saveCustomMeta();
+    if (isAreaFilter(currentFilter)) renderAreaProjects(currentFilter);
+    else render();
+  }
+  closeRenameModal();
+}
+
 function rebuildSidebarAreas() {
-  // Custom areas appear in the sidebar dynamically
-  // We just trigger a full re-render which handles counts
-  // The static area items are in HTML; custom ones need to be injected
+  const pencil = pencilSVG;
+  // Built-in areas nav
+  const builtInNav = document.getElementById("builtin-areas-nav");
+  if (builtInNav) {
+    const builtIn = [
+      { id:"shop",     dotClass:"adn-shop" },
+      { id:"design",   dotClass:"adn-design" },
+      { id:"personal", dotClass:"adn-personal" }
+    ];
+    builtInNav.innerHTML = builtIn.map(a => `
+      <button class="nav-item" onclick="setFilter('${a.id}',this)">
+        <span class="area-dot-nav ${a.dotClass}"></span>
+        <span class="nav-label">${getAreaLabel(a.id)}</span>
+        <button class="rename-btn" onclick="openRenameArea('${a.id}',event)" title="Rename">${pencil}</button>
+        <span class="nav-count" id="nc-${a.id}"></span>
+      </button>`).join("");
+  }
+  // Custom areas nav
   const nav = document.getElementById("custom-areas-nav");
   if (!nav) return;
   nav.innerHTML = customAreas.map(a => `
     <button class="nav-item" onclick="setFilter('${a.id}',this)">
       <span class="area-dot-nav" style="background:var(--label4)"></span>
-      <span class="nav-label">${a.label}</span>
+      <span class="nav-label">${getAreaLabel(a.id)}</span>
+      <button class="rename-btn" onclick="openRenameArea('${a.id}',event)" title="Rename">${pencil}</button>
       <span class="nav-count" id="nc-${a.id}"></span>
     </button>`).join("");
 }
@@ -3153,11 +3256,13 @@ async function pushToGist() {
   const token = getToken(); if (!token) return;
   setSyncDot("syncing");
   const payload = {
-    tasks_v2:              state,
-    tasks_dynamic:         dynamicTasks,
-    tasks_custom_areas:    customAreas,
-    tasks_custom_sections: customSections,
-    notes_pad:             localStorage.getItem("notes-pad") || ""
+    tasks_v2:                state,
+    tasks_dynamic:           dynamicTasks,
+    tasks_custom_areas:      customAreas,
+    tasks_custom_sections:   customSections,
+    tasks_area_renames:      areaNameOverrides,
+    tasks_section_renames:   sectionNameOverrides,
+    notes_pad:               localStorage.getItem("notes-pad") || ""
   };
   try {
     const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
@@ -3198,8 +3303,17 @@ async function pullFromGist() {
       customSections = p.tasks_custom_sections;
       localStorage.setItem("tasks-custom-sections", JSON.stringify(customSections));
     }
+    if (p.tasks_area_renames) {
+      areaNameOverrides = p.tasks_area_renames;
+      localStorage.setItem("tasks-area-renames", JSON.stringify(areaNameOverrides));
+    }
+    if (p.tasks_section_renames) {
+      sectionNameOverrides = p.tasks_section_renames;
+      localStorage.setItem("tasks-section-renames", JSON.stringify(sectionNameOverrides));
+    }
     if (p.notes_pad) localStorage.setItem("notes-pad", p.notes_pad);
     setSyncDot("synced");
+    rebuildSidebarAreas();
     render();
   } catch(e) { setSyncDot("error"); }
 }
@@ -3514,7 +3628,7 @@ function doSearch(q) {
     return title.includes(query) || detail.includes(query);
   });
 
-  const AREA_NAMES = { shop:"Shop", design:"Design", personal:"Personal", inbox:"Inbox" };
+
 
   function highlight(text) {
     const idx = text.toLowerCase().indexOf(query);
@@ -3536,7 +3650,7 @@ function doSearch(q) {
 
   const lastQ = q;
   document.getElementById("main-tasks").innerHTML = results.map(t => {
-    const areaName = AREA_NAMES[tA(t)] || customAreas.find(a=>a.id===tA(t))?.label || tA(t);
+    const areaName = getAreaLabel(tA(t));
     const context  = `${areaName} › ${tS(t)}`;
     return `<div class="search-result">
       <div class="check-wrap" onclick="searchToggleTask('${t.id}','${lastQ}')">
