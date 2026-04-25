@@ -853,6 +853,15 @@
   .modal-save-btn:active { transform: scale(0.97); }
   .modal-save-btn:disabled { opacity: 0.4; cursor: default; }
 
+  .modal-delete-btn {
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    color: white; background: var(--red);
+    border: none; cursor: pointer; padding: 7px 18px;
+    border-radius: 8px; transition: background 0.1s, transform 0.1s;
+  }
+  .modal-delete-btn:hover { background: #D70015; }
+  .modal-delete-btn:active { transform: scale(0.97); }
+
   /* ── When picker ────────────────────────────────────────────────────────── */
   .when-overlay {
     display: none; position: fixed; inset: 0; z-index: 700;
@@ -1376,15 +1385,29 @@
   </div>
 </div>
 
-<!-- ── Rename Modal ──────────────────────────────────────────────── -->
+<!-- ── Rename / Delete Modal ─────────────────────────────────────── -->
 <div class="quick-modal" id="rename-modal">
   <div class="quick-sheet">
     <h3 id="rename-modal-title">Rename</h3>
-    <input class="quick-input" id="rename-input" type="text" placeholder="New name…"
-      onkeydown="if(event.key==='Enter')confirmRename();if(event.key==='Escape')closeRenameModal()">
-    <div class="quick-actions">
-      <button class="modal-cancel-btn" onclick="closeRenameModal()">Cancel</button>
-      <button class="modal-save-btn" onclick="confirmRename()">Rename</button>
+    <!-- Rename step -->
+    <div id="rename-step">
+      <input class="quick-input" id="rename-input" type="text" placeholder="New name…"
+        onkeydown="if(event.key==='Enter')confirmRename();if(event.key==='Escape')closeRenameModal()">
+      <div class="quick-actions">
+        <button class="modal-delete-btn" onclick="showDeleteConfirm()">Delete</button>
+        <div style="display:flex;gap:8px;margin-left:auto">
+          <button class="modal-cancel-btn" onclick="closeRenameModal()">Cancel</button>
+          <button class="modal-save-btn" onclick="confirmRename()">Rename</button>
+        </div>
+      </div>
+    </div>
+    <!-- Delete confirm step -->
+    <div id="delete-confirm-step" style="display:none">
+      <p id="delete-confirm-msg" style="font-size:14px;color:var(--label2);margin-bottom:16px;line-height:1.5"></p>
+      <div class="quick-actions">
+        <button class="modal-cancel-btn" onclick="hideDeleteConfirm()">Cancel</button>
+        <button class="modal-delete-btn" onclick="confirmDelete()">Delete</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2322,6 +2345,12 @@ function renderAreaProjects(areaName) {
     return;
   }
 
+  // Filter out deleted sections
+  const deletedSections = Object.keys(sectionNameOverrides[areaName] || {})
+    .filter(k => k.startsWith('_hidden_'))
+    .map(k => k.replace('_hidden_', ''));
+  Object.keys(secMap).forEach(s => { if (deletedSections.includes(s)) delete secMap[s]; });
+
   // Apply stored project order
   const storedOrder = state._projectOrder?.[areaName];
   let entries = Object.keys(secMap);
@@ -2924,7 +2953,72 @@ function openRenameSection(areaId, sectionName, e) {
 }
 function closeRenameModal() {
   document.getElementById("rename-modal").classList.remove("open");
+  hideDeleteConfirm();
   _renameCtx = null;
+}
+function showDeleteConfirm() {
+  const label = _renameCtx?.type === 'area'
+    ? `"${getAreaLabel(_renameCtx.areaId)}"`
+    : `"${getSectionLabel(_renameCtx?.areaId, _renameCtx?.sectionName)}"`;
+  const type = _renameCtx?.type === 'area' ? 'area' : 'project';
+  document.getElementById("delete-confirm-msg").textContent =
+    `Delete ${type} ${label}? Tasks inside will be moved to Inbox.`;
+  document.getElementById("rename-step").style.display = "none";
+  document.getElementById("delete-confirm-step").style.display = "";
+}
+function hideDeleteConfirm() {
+  document.getElementById("rename-step").style.display = "";
+  document.getElementById("delete-confirm-step").style.display = "none";
+}
+function confirmDelete() {
+  if (!_renameCtx) { closeRenameModal(); return; }
+  if (_renameCtx.type === 'area') {
+    const id = _renameCtx.areaId;
+    // Move all tasks in this area to inbox
+    allTasks().forEach(t => {
+      const tA = state[t.id]?.areaOverride || t.area;
+      if (tA === id) {
+        state[t.id] = { ...(state[t.id] || {}), areaOverride: 'inbox' };
+        delete state[t.id].sectionOverride;
+      }
+    });
+    // Remove from customAreas if custom
+    customAreas = customAreas.filter(a => a.id !== id);
+    // Hide built-in areas by adding to overrides with a hidden flag
+    if (['shop','design','personal'].includes(id)) {
+      if (!areaNameOverrides._hidden) areaNameOverrides._hidden = [];
+      if (!areaNameOverrides._hidden.includes(id)) areaNameOverrides._hidden.push(id);
+    }
+    delete areaNameOverrides[id];
+    saveCustomMeta(); saveState(); schedPush();
+    if (currentFilter === id) { currentFilter = 'all'; }
+    rebuildSidebarAreas(); render();
+  } else {
+    const { areaId, sectionName } = _renameCtx;
+    // Move all tasks in this section to inbox
+    allTasks().forEach(t => {
+      const tA = state[t.id]?.areaOverride || t.area;
+      const tS = state[t.id]?.sectionOverride || t.section;
+      if (tA === areaId && tS === sectionName) {
+        state[t.id] = { ...(state[t.id] || {}), areaOverride: 'inbox' };
+        delete state[t.id].sectionOverride;
+      }
+    });
+    // Remove from customSections if custom
+    if (customSections[areaId]) {
+      customSections[areaId] = customSections[areaId].filter(s => s !== sectionName);
+    }
+    // Hide built-in sections
+    if (!sectionNameOverrides[areaId]) sectionNameOverrides[areaId] = {};
+    sectionNameOverrides[areaId]['_hidden_' + sectionName] = '__deleted__';
+    if (sectionNameOverrides[areaId][sectionName]) delete sectionNameOverrides[areaId][sectionName];
+    saveCustomMeta(); saveState(); schedPush();
+    if (currentFilter === '__sec__' && currentSectionCtx?.name === sectionName) {
+      currentFilter = areaId; currentSectionCtx = null;
+    }
+    renderAreaProjects(areaId);
+  }
+  closeRenameModal();
 }
 function confirmRename() {
   const val = document.getElementById("rename-input").value.trim();
@@ -2962,11 +3056,12 @@ function rebuildSidebarAreas() {
   // Built-in areas nav
   const builtInNav = document.getElementById("builtin-areas-nav");
   if (builtInNav) {
+    const hidden = areaNameOverrides._hidden || [];
     const builtIn = [
       { id:"shop",     dotClass:"adn-shop" },
       { id:"design",   dotClass:"adn-design" },
       { id:"personal", dotClass:"adn-personal" }
-    ];
+    ].filter(a => !hidden.includes(a.id));
     builtInNav.innerHTML = builtIn.map(a => `
       <button class="nav-item" onclick="setFilter('${a.id}',this)">
         <span class="area-dot-nav ${a.dotClass}"></span>
