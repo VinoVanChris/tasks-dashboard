@@ -473,26 +473,15 @@
   }
 
   /* ── Subtasks ────────────────────────────────────────────────────────── */
-  .subtask-toggle {
-    display: flex; align-items: center; gap: 6px;
-    margin-top: 5px; cursor: pointer; width: fit-content;
+  .subtask-toggle { display: none; } /* legacy — replaced by subtask-toggle-icon */
+  .subtask-toggle-icon {
+    display: inline-flex; align-items: center; gap: 3px;
+    margin-top: 4px; cursor: pointer; width: fit-content;
+    opacity: 0.35; color: var(--label);
+    transition: opacity 0.15s;
   }
-  .subtask-pip {
-    font-size: 12px; font-weight: 500;
-    padding: 1px 7px; border-radius: 100px;
-    background: var(--blue-light); color: var(--blue);
-  }
-  .subtask-pip.all-done { background: var(--green-light); color: var(--green); }
-  .subtask-chevron {
-    width: 13px; height: 13px;
-    display: flex; align-items: center; justify-content: center;
-    transition: transform 0.18s;
-  }
-  .subtask-chevron svg {
-    width: 8px; height: 8px;
-    stroke: var(--label3); stroke-width: 2;
-    fill: none; stroke-linecap: round; stroke-linejoin: round;
-  }
+  .subtask-toggle-icon:hover { opacity: 0.65; }
+  .sub-all-done-check { flex-shrink: 0; }
   .subtask-chevron.open { transform: rotate(180deg); }
 
   .subtask-rows { display: none; margin-top: 6px; padding-left: 2px; }
@@ -2617,12 +2606,11 @@ function taskRowHTML(t) {
     const allDone    = subTotal > 0 && subDone === subTotal;
     const isOpen     = !!state[t.id+"__open"];
 
+    // Subtask indicator icon (clickable) replaces the verbose "0/4 steps" pip
     let pipHTML = subTotal > 0 ? `
-      <div class="subtask-toggle" onclick="toggleSubtasks('${t.id}')">
-        <span class="subtask-pip${allDone?" all-done":""}">${subDone}/${subTotal} steps</span>
-        <div class="subtask-chevron${isOpen?" open":""}">
-          <svg viewBox="0 0 10 10"><polyline points="2,4 5,7 8,4"/></svg>
-        </div>
+      <div class="subtask-toggle-icon" onclick="toggleSubtasks('${t.id}')" title="${subDone}/${subTotal} steps">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="2.5" cy="3.5" r="1" fill="currentColor" stroke="none"/><circle cx="2.5" cy="6.5" r="1" fill="currentColor" stroke="none"/><circle cx="2.5" cy="9.5" r="1" fill="currentColor" stroke="none"/><line x1="5" y1="3.5" x2="11" y2="3.5"/><line x1="5" y1="6.5" x2="11" y2="6.5"/><line x1="5" y1="9.5" x2="9" y2="9.5"/></svg>
+        ${allDone ? `<svg class="sub-all-done-check" width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="var(--green)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3"/></svg>` : ""}
       </div>` : "";
 
     const showRows = isOpen || (subInputOpen && subTotal === 0);
@@ -2704,12 +2692,11 @@ function taskRowHTML(t) {
       </div>
       <div class="task-body">
         <div class="task-title" style="${isDone?"":"cursor:pointer"}" onclick="${isDone?"void(0)":"openEditTask('"+t.id+"')"}"><span class="task-title-text">${t.title}</span>${indicatorsHTML}</div>
-        ${t.detail ? `<div class="task-detail">${t.detail}</div>` : ""}
         ${!isDone && state[t.id]?.recur ? `<div class="recur-badge"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9A6 6 0 1 0 3.5 4.5"/><polyline points="1,2 3.5,4.5 6,2"/></svg> ${RECUR_LABELS[state[t.id].recur]}</div>` : ""}
         ${!isDone && dueDate && dueDate !== todayRowStr ? `<div class="task-due ${dueDate < todayRowStr ? "due-overdue" : "due-future"}">
           <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><line x1="5" y1="1.5" x2="5" y2="4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="1.5" x2="11" y2="4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="2" y1="6.5" x2="14" y2="6.5" stroke="currentColor" stroke-width="1.2"/></svg>
           ${formatDueLabel(dueDate)}</div>` : ""}
-        ${badges}${stamp}${subHTML}${noteHTML}
+        ${badges}${stamp}${noteOpen ? noteHTML : ""}${subHTML}
       </div>
       ${actions}
     </div>`;
