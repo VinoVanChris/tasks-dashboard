@@ -2344,7 +2344,7 @@ function renderAreaProjects(areaName) {
         <div class="project-drag-handle" onclick="event.stopPropagation()">${gripSVG}</div>
         <div class="project-card-icon">${folderSVG}</div>
         <div class="project-card-body">
-          <div class="project-card-name" style="display:flex;align-items:center;gap:4px">${displayName}<button class="rename-btn" onclick="openRenameSection('${safeArea}','${safeName}',event)" title="Rename project">${pencilSVG}</button></div>
+          <div class="project-card-name" style="display:flex;align-items:center;gap:4px">${displayName}<span class="rename-btn" onclick="openRenameSection('${safeArea}','${safeName}',event)" title="Rename project">${pencilSVG}</span></div>
           <div class="project-card-count">${count} task${count!==1?'s':''}</div>
         </div>
         <div class="project-card-arrow">${chevSVG}</div>
