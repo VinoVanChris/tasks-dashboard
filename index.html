@@ -376,6 +376,14 @@
   .task-row.is-today:hover { background: var(--sep2); }
   .task-row.is-overdue { background: var(--red-light); }
   .task-row.is-done    { opacity: 0.45; }
+  .task-row.completing {
+    background: rgba(52,199,89,0.12) !important;
+    transition: background 0.15s, opacity 0.35s, transform 0.35s !important;
+  }
+  .task-row.completing.fade-out {
+    opacity: 0;
+    transform: translateX(18px);
+  }
 
   /* ── Checkbox ────────────────────────────────────────────────────────── */
   .check-wrap {
@@ -1813,7 +1821,7 @@ const VIEW_TITLES = {
   today:    "Today",
   upcoming: "Upcoming",
   all:      "All Tasks",
-  shop:     "Broadway Beer Wine & Spirits",
+  shop:     "Shop",
   design:   "Design",
   personal: "Personal",
   logbook:  "Logbook",
@@ -2174,17 +2182,38 @@ function saveState() {
 
 function toggleTask(id) {
   if (state[id]?.completed) {
-    // Uncomplete — remove done flags, keep other state
+    // Uncomplete — instant, no animation needed
     const s = { ...(state[id] || {}) };
     delete s.completed; delete s.completedAt;
     state[id] = Object.keys(s).length ? s : undefined;
     if (!state[id]) delete state[id];
+    saveState(); schedPush(); render();
   } else {
-    const recur = state[id]?.recur;
-    state[id] = { ...(state[id] || {}), completed: true, completedAt: new Date().toLocaleDateString("en-CA") };
-    if (recur) spawnNextRecurrence(id);
+    // Completing — play satisfaction animation first
+    const row = document.getElementById("trow-" + id);
+    if (row) {
+      row.classList.add("completing");
+      // Turn the check circle green immediately
+      const circle = row.querySelector(".check-circle");
+      if (circle) { circle.style.background = "var(--green)"; circle.style.borderColor = "var(--green)"; }
+      // Short pause on green, then slide-fade out
+      setTimeout(() => {
+        row.classList.add("fade-out");
+        setTimeout(() => {
+          const recur = state[id]?.recur;
+          state[id] = { ...(state[id] || {}), completed: true, completedAt: new Date().toLocaleDateString("en-CA") };
+          if (recur) spawnNextRecurrence(id);
+          saveState(); schedPush(); render();
+        }, 380);
+      }, 420);
+    } else {
+      // Fallback (e.g. logbook view)
+      const recur = state[id]?.recur;
+      state[id] = { ...(state[id] || {}), completed: true, completedAt: new Date().toLocaleDateString("en-CA") };
+      if (recur) spawnNextRecurrence(id);
+      saveState(); schedPush(); render();
+    }
   }
-  saveState(); schedPush(); render();
 }
 
 function calcNextDue(fromDate, recur) {
