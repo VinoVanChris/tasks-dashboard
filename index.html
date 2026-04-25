@@ -2725,7 +2725,7 @@ function taskRowHTML(t) {
   const subIconSVG  = `<svg width="12" height="13" viewBox="0 0 12 13" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><circle cx="2.5" cy="3.5" r="1" fill="currentColor" stroke="none"/><circle cx="2.5" cy="6.5" r="1" fill="currentColor" stroke="none"/><circle cx="2.5" cy="9.5" r="1" fill="currentColor" stroke="none"/><line x1="5" y1="3.5" x2="10.5" y2="3.5"/><line x1="5" y1="6.5" x2="10.5" y2="6.5"/><line x1="5" y1="9.5" x2="9" y2="9.5"/></svg>`;
   let indicators = "";
   if (!isDone && priority !== 'none') indicators += `<span class="ind-priority p-${priority}" onclick="cyclePriority('${t.id}',event)" title="Priority"></span>`;
-  if (hasNote || t.detail)            indicators += noteIconSVG;
+  if (hasNote)                        indicators += noteIconSVG;
   if (subTotal2 > 0)                  indicators += `<span class="ind-subtask" onclick="toggleSubtasks('${t.id}')" title="Steps">${subIconSVG}</span>`;
   const indicatorsHTML = indicators ? `<span class="task-indicators">${indicators}</span>` : "";
 
