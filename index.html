@@ -1323,21 +1323,21 @@
 
 <!-- FAB + menu live outside .app so they're always visible on mobile -->
 <div class="fab-menu" id="fab-menu">
-  <button class="fab-menu-item" onclick="closeFabMenu();openAddTask()">
+  <button class="fab-menu-item" id="fab-new-task" onclick="closeFabMenu();openAddTask()">
     <span class="fab-menu-icon task-icon">＋</span>
     <span class="fab-menu-text">
       <span class="fab-menu-label">New Task</span>
       <span class="fab-menu-desc">Add a task to the current view</span>
     </span>
   </button>
-  <button class="fab-menu-item" onclick="closeFabMenu();openNewSectionModal()">
+  <button class="fab-menu-item" id="fab-new-project" onclick="closeFabMenu();openNewSectionModal()">
     <span class="fab-menu-icon section-icon"><svg width="17" height="17" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="#0A84FF" stroke-width="1.8"/><line x1="10" y1="6" x2="10" y2="14" stroke="#0A84FF" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="10" x2="14" y2="10" stroke="#0A84FF" stroke-width="2" stroke-linecap="round"/></svg></span>
     <span class="fab-menu-text">
-      <span class="fab-menu-label">New Section</span>
-      <span class="fab-menu-desc">Add a section within an area</span>
+      <span class="fab-menu-label">New Project</span>
+      <span class="fab-menu-desc">Add a project within this area</span>
     </span>
   </button>
-  <button class="fab-menu-item" onclick="closeFabMenu();openNewAreaModal()">
+  <button class="fab-menu-item" id="fab-new-area" onclick="closeFabMenu();openNewAreaModal()">
     <span class="fab-menu-icon area-icon"><svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M3 5h14M3 10h14M3 15h8" stroke="#34C759" stroke-width="2" stroke-linecap="round"/></svg></span>
     <span class="fab-menu-text">
       <span class="fab-menu-label">New Area</span>
@@ -1349,10 +1349,10 @@
   <svg viewBox="0 0 20 20"><line x1="10" y1="3" x2="10" y2="17"/><line x1="3" y1="10" x2="17" y2="10"/></svg>
 </button>
 
-<!-- ── New Section Modal ─────────────────────────────────────────── -->
+<!-- ── New Project Modal ─────────────────────────────────────────── -->
 <div class="quick-modal" id="new-section-modal">
   <div class="quick-sheet">
-    <h3>New Section</h3>
+    <h3>New Project</h3>
     <select class="quick-input" id="qs-area" style="margin-bottom:10px;cursor:pointer;"></select>
     <input class="quick-input" id="qs-name" type="text" placeholder="Section name…"
       onkeydown="if(event.key==='Enter')confirmQuickSection();if(event.key==='Escape')closeNewSectionModal()">
@@ -2827,6 +2827,15 @@ document.getElementById("mt-title").addEventListener("input", function() {
 
 // ── FAB context menu ─────────────────────────────────────────────────────
 function toggleFabMenu() {
+  // Inside a project → skip menu, go straight to new task
+  if (currentFilter === "__sec__") {
+    openAddTask();
+    return;
+  }
+  // Inside an area → show Task + Project only (no New Area)
+  const inArea = isAreaFilter(currentFilter);
+  document.getElementById("fab-new-project").style.display = inArea ? "" : "none";
+  document.getElementById("fab-new-area").style.display    = inArea ? "none" : "";
   const m = document.getElementById("fab-menu");
   m.classList.toggle("open");
 }
@@ -2841,7 +2850,7 @@ document.addEventListener("click", e => {
   }
 });
 
-// ── New Section / Area quick modals ──────────────────────────────────────
+// ── New Project / Area quick modals ──────────────────────────────────────
 function openNewSectionModal() {
   // Populate area dropdown
   const sel = document.getElementById("qs-area");
@@ -2851,9 +2860,9 @@ function openNewSectionModal() {
     { id:"personal", label:"Personal" },
     ...customAreas.map(a => ({ id: a.id, label: a.label }))
   ];
-  sel.innerHTML = areas.map(a => `<option value="${a.id}">${a.label}</option>`).join("");
+  sel.innerHTML = areas.map(a => `<option value="${a.id}">${getAreaLabel(a.id)}</option>`).join("");
   // Pre-select current area if applicable
-  if (["shop","design","personal"].includes(currentFilter)) sel.value = currentFilter;
+  if (isAreaFilter(currentFilter)) sel.value = currentFilter;
   document.getElementById("qs-name").value = "";
   document.getElementById("new-section-modal").classList.add("open");
   setTimeout(() => document.getElementById("qs-name").focus(), 50);
