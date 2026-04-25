@@ -1870,7 +1870,7 @@ function saveCustomMeta() {
 
 function getAreaLabel(id) {
   if (areaNameOverrides[id]) return areaNameOverrides[id];
-  if (id === "shop")     return "Broadway Beer Wine";
+  if (id === "shop")     return "Shop";
   if (id === "design")   return "Design";
   if (id === "personal") return "Personal";
   if (id === "inbox")    return "Inbox";
@@ -2884,7 +2884,7 @@ function openNewSectionModal() {
   // Populate area dropdown
   const sel = document.getElementById("qs-area");
   const areas = [
-    { id:"shop", label:"Broadway Beer Wine" },
+    { id:"shop", label:"Shop" },
     { id:"design", label:"Design" },
     { id:"personal", label:"Personal" },
     ...customAreas.map(a => ({ id: a.id, label: a.label }))
