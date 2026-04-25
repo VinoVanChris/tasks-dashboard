@@ -650,14 +650,19 @@
   .task-row.dragging { opacity: 0.4; }
 
   /* ── Priority dot ────────────────────────────────────────────────────── */
-  .priority-dot {
-    width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
-    cursor: pointer; margin-right: 6px; margin-top: 1px;
-    border: 1.5px solid transparent; transition: transform 0.1s;
-    align-self: flex-start; margin-top: 4px;
+  .priority-dot { display: none; } /* legacy — moved inline */
+  /* Inline priority dot inside indicators */
+  .ind-priority {
+    display: inline-block;
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    cursor: pointer; position: relative; top: -1px;
+    transition: transform 0.1s;
   }
-  .priority-dot:active { transform: scale(1.3); }
-  .priority-dot.p-none    { background: transparent; border-color: var(--label4); }
+  .ind-priority:active { transform: scale(1.3); }
+  .ind-priority.p-high   { background: var(--orange); }
+  .ind-priority.p-urgent { background: var(--red); }
+  .ind-subtask { display: inline-flex; align-items: center; cursor: pointer; }
+  .priority-dot { display: none; } /* keep rule for safety */
   .priority-dot.p-high    { background: var(--orange); border-color: var(--orange); }
   .priority-dot.p-urgent  { background: var(--red);    border-color: var(--red); }
   /* Priority chips in modal */
@@ -2659,13 +2664,15 @@ function taskRowHTML(t) {
     }
   }
 
-  // Inline indicators (note icon, subtask icon) — Things 3 style
-  const subTotal2 = (t.subtasks||[]).length + dynSubs.length;
-  const noteIconSVG   = `<svg width="12" height="13" viewBox="0 0 12 13" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="1" width="9" height="11" rx="1.5"/><line x1="3.5" y1="4.5" x2="8.5" y2="4.5"/><line x1="3.5" y1="6.8" x2="8.5" y2="6.8"/><line x1="3.5" y1="9.1" x2="6.5" y2="9.1"/></svg>`;
-  const subIconSVG    = `<svg width="12" height="13" viewBox="0 0 12 13" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><circle cx="2.5" cy="3.5" r="1" fill="currentColor" stroke="none"/><circle cx="2.5" cy="6.5" r="1" fill="currentColor" stroke="none"/><circle cx="2.5" cy="9.5" r="1" fill="currentColor" stroke="none"/><line x1="5" y1="3.5" x2="10.5" y2="3.5"/><line x1="5" y1="6.5" x2="10.5" y2="6.5"/><line x1="5" y1="9.5" x2="9" y2="9.5"/></svg>`;
+  // Inline indicators: [priority dot] [note icon] [subtask icon]
+  const subTotal2  = (t.subtasks||[]).length + dynSubs.length;
+  const priority   = state[t.id]?.priority || 'none';
+  const noteIconSVG = `<svg width="12" height="13" viewBox="0 0 12 13" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="1" width="9" height="11" rx="1.5"/><line x1="3.5" y1="4.5" x2="8.5" y2="4.5"/><line x1="3.5" y1="6.8" x2="8.5" y2="6.8"/><line x1="3.5" y1="9.1" x2="6.5" y2="9.1"/></svg>`;
+  const subIconSVG  = `<svg width="12" height="13" viewBox="0 0 12 13" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><circle cx="2.5" cy="3.5" r="1" fill="currentColor" stroke="none"/><circle cx="2.5" cy="6.5" r="1" fill="currentColor" stroke="none"/><circle cx="2.5" cy="9.5" r="1" fill="currentColor" stroke="none"/><line x1="5" y1="3.5" x2="10.5" y2="3.5"/><line x1="5" y1="6.5" x2="10.5" y2="6.5"/><line x1="5" y1="9.5" x2="9" y2="9.5"/></svg>`;
   let indicators = "";
-  if (hasNote || t.detail) indicators += noteIconSVG;
-  if (subTotal2 > 0)       indicators += subIconSVG;
+  if (!isDone && priority !== 'none') indicators += `<span class="ind-priority p-${priority}" onclick="cyclePriority('${t.id}',event)" title="Priority"></span>`;
+  if (hasNote || t.detail)            indicators += noteIconSVG;
+  if (subTotal2 > 0)                  indicators += `<span class="ind-subtask" onclick="toggleSubtasks('${t.id}')" title="Steps">${subIconSVG}</span>`;
   const indicatorsHTML = indicators ? `<span class="task-indicators">${indicators}</span>` : "";
 
   // Action buttons
@@ -2683,20 +2690,16 @@ function taskRowHTML(t) {
   const gripSVG = `<svg viewBox="0 0 10 16" width="10" height="16" fill="currentColor"><circle cx="3" cy="3" r="1.5"/><circle cx="7" cy="3" r="1.5"/><circle cx="3" cy="8" r="1.5"/><circle cx="7" cy="8" r="1.5"/><circle cx="3" cy="13" r="1.5"/><circle cx="7" cy="13" r="1.5"/></svg>`;
 
   return `
-    <div class="task-row${isDone?" is-done":""}${isOverdue?" is-overdue":""}${isToday?" is-today":""}" data-task-id="${t.id}" id="trow-${t.id}">
+    <div class="task-row${isDone?" is-done":""}${isToday?" is-today":""}" data-task-id="${t.id}" id="trow-${t.id}">
       <div class="drag-handle" title="Drag to reorder">${gripSVG}</div>
-      ${!isDone ? `<div class="priority-dot p-${state[t.id]?.priority||'none'}" onclick="cyclePriority('${t.id}',event)" title="Set priority"></div>` : ""}
       <div class="check-wrap">
         <input type="checkbox" class="task-check" ${isDone?"checked":""} onchange="toggleTask('${t.id}')">
         <div class="check-circle">${checkSVG}</div>
       </div>
       <div class="task-body">
         <div class="task-title" style="${isDone?"":"cursor:pointer"}" onclick="${isDone?"void(0)":"openEditTask('"+t.id+"')"}"><span class="task-title-text">${t.title}</span>${indicatorsHTML}</div>
-        ${!isDone && state[t.id]?.recur ? `<div class="recur-badge"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9A6 6 0 1 0 3.5 4.5"/><polyline points="1,2 3.5,4.5 6,2"/></svg> ${RECUR_LABELS[state[t.id].recur]}</div>` : ""}
-        ${!isDone && dueDate && dueDate !== todayRowStr ? `<div class="task-due ${dueDate < todayRowStr ? "due-overdue" : "due-future"}">
-          <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><line x1="5" y1="1.5" x2="5" y2="4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="1.5" x2="11" y2="4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="2" y1="6.5" x2="14" y2="6.5" stroke="currentColor" stroke-width="1.2"/></svg>
-          ${formatDueLabel(dueDate)}</div>` : ""}
-        ${badges}${stamp}${noteOpen ? noteHTML : ""}${subHTML}
+        ${noteOpen ? noteHTML : ""}
+        ${subHTML}
       </div>
       ${actions}
     </div>`;
