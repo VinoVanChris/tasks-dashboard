@@ -425,7 +425,22 @@
     color: var(--label);
     line-height: 1.35;
     letter-spacing: -0.2px;
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    flex-wrap: wrap;
   }
+  .task-title-text { flex-shrink: 1; }
+  .task-indicators {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+    opacity: 0.38;
+    position: relative;
+    top: 1px;
+  }
+  .task-indicators svg { display: block; }
   .task-row.is-done .task-title { text-decoration: line-through; color: var(--label3); font-weight: 400; }
 
   .task-detail {
@@ -433,8 +448,9 @@
     font-weight: 400;
     color: var(--label2);
     margin-top: 3px;
-    line-height: 1.4;
+    line-height: 1.5;
     letter-spacing: -0.1px;
+    white-space: pre-wrap;
   }
 
   .task-meta {
@@ -541,7 +557,8 @@
   /* Note display + editor */
   .task-note-display {
     font-size: 12px; color: var(--blue);
-    margin-top: 3px; font-style: italic; line-height: 1.4;
+    margin-top: 3px; font-style: italic; line-height: 1.5;
+    white-space: pre-wrap;
   }
   .note-area { margin-top: 6px; }
   .note-textarea {
@@ -1804,7 +1821,8 @@ const TASKS = [
   ]},
   { id:"pers-2",  area:"personal", section:"Personal", title:"Fitness routine",      detail:"Current plan and goals",                          tags:["in-progress"] },
   { id:"pers-3",  area:"personal", section:"Personal", title:"Whitecaps season",     detail:"Match attendance + schedule",                     tags:["ongoing"] },
-  { id:"pers-4",  area:"personal", section:"Personal", title:"Son's film projects",  detail:"Family — Support + collaboration opportunities",   tags:["ongoing"] }
+  { id:"pers-4",  area:"personal", section:"Personal", title:"Son's film projects",  detail:"Family — Support + collaboration opportunities",   tags:["ongoing"] },
+  { id:"pers-thinkith", area:"personal", section:"Personal", title:"As A Man Thinkith", detail:"You are what you think about... so what are you thinking about?\n\n1. Mind is a Garden: Human beings possess the capacity to nurture their mental landscape, making choices regarding the type of thoughts planted and tended to.\n2. Thought and Character: One becomes precisely what they think, reflecting the totality of accumulated thoughts.\n3. Thought and Choice / Responsibility: Individuals hold exclusive authority over their decisions and bear ultimate responsibility for outcomes resulting from their thoughts.\n4. Effect of Thought on Circumstances: An individual creates their experiences via internal processes instead of merely reacting to outside forces.\n5. On the Soul: Self-mastery empowers human potential, allowing growth beyond limitations imposed externally.\n6. Fate, Nature, & Universal Intelligence: Humankind operates under universal principles governing creation and transformation.\n7. Thought → Habit → Circumstance: Consistent thoughts form habitual behaviors leading to specific environments.\n8. Thought and Suffering: Experiences serve as catalysts for understanding oneself as creator of fortunes and hardships alike.\n9. Effect of Thought on Health and the Body: Mental states significantly affect physical well-being.\n10. Serenity: Calming the mind fosters resiliency against adversity.\n11. On Weakness & Fear: Strength emerges from confronting anxieties head-on.\n12. Thought and Purpose: Goal setting provides direction and discipline necessary for achievement.\n13. The Thought-Factor in Achievement: Success stems solely from intentional cognitive activity.\n14. Visions and Ideals: Inspiration fuels progress despite challenges encountered along the journey.", tags:[], subtasks:[] }
 ];
 
 const BADGE_MAP = {
@@ -2649,9 +2667,18 @@ function taskRowHTML(t) {
         onkeydown="if(event.key==='Escape')toggleNote('${t.id}')"
         placeholder="Add a note…">${noteText}</textarea></div>`;
     } else if (hasNote) {
-      noteHTML = `<div class="task-note-display">📝 ${noteText}</div>`;
+      noteHTML = `<div class="task-note-display">${noteText}</div>`;
     }
   }
+
+  // Inline indicators (note icon, subtask icon) — Things 3 style
+  const subTotal2 = (t.subtasks||[]).length + dynSubs.length;
+  const noteIconSVG   = `<svg width="12" height="13" viewBox="0 0 12 13" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="1" width="9" height="11" rx="1.5"/><line x1="3.5" y1="4.5" x2="8.5" y2="4.5"/><line x1="3.5" y1="6.8" x2="8.5" y2="6.8"/><line x1="3.5" y1="9.1" x2="6.5" y2="9.1"/></svg>`;
+  const subIconSVG    = `<svg width="12" height="13" viewBox="0 0 12 13" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><circle cx="2.5" cy="3.5" r="1" fill="currentColor" stroke="none"/><circle cx="2.5" cy="6.5" r="1" fill="currentColor" stroke="none"/><circle cx="2.5" cy="9.5" r="1" fill="currentColor" stroke="none"/><line x1="5" y1="3.5" x2="10.5" y2="3.5"/><line x1="5" y1="6.5" x2="10.5" y2="6.5"/><line x1="5" y1="9.5" x2="9" y2="9.5"/></svg>`;
+  let indicators = "";
+  if (hasNote || t.detail) indicators += noteIconSVG;
+  if (subTotal2 > 0)       indicators += subIconSVG;
+  const indicatorsHTML = indicators ? `<span class="task-indicators">${indicators}</span>` : "";
 
   // Action buttons
   const flagSVG = `<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="7,1.5 8.6,5.2 12.5,5.6 9.7,8.1 10.5,12 7,10 3.5,12 4.3,8.1 1.5,5.6 5.4,5.2"/></svg>`;
@@ -2676,7 +2703,7 @@ function taskRowHTML(t) {
         <div class="check-circle">${checkSVG}</div>
       </div>
       <div class="task-body">
-        <div class="task-title" style="${isDone?"":"cursor:pointer"}" onclick="${isDone?"void(0)":"openEditTask('"+t.id+"')"}">${t.title}</div>
+        <div class="task-title" style="${isDone?"":"cursor:pointer"}" onclick="${isDone?"void(0)":"openEditTask('"+t.id+"')"}"><span class="task-title-text">${t.title}</span>${indicatorsHTML}</div>
         ${t.detail ? `<div class="task-detail">${t.detail}</div>` : ""}
         ${!isDone && state[t.id]?.recur ? `<div class="recur-badge"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9A6 6 0 1 0 3.5 4.5"/><polyline points="1,2 3.5,4.5 6,2"/></svg> ${RECUR_LABELS[state[t.id].recur]}</div>` : ""}
         ${!isDone && dueDate && dueDate !== todayRowStr ? `<div class="task-due ${dueDate < todayRowStr ? "due-overdue" : "due-future"}">
