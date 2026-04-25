@@ -508,7 +508,7 @@
     transition: opacity 0.12s;
   }
   .today-btn svg { width: 14px; height: 14px; }
-  .today-btn.is-today svg    { fill: var(--orange); stroke: var(--orange); }
+  .today-btn.is-today svg    { fill: #FFD700; stroke: #F0B800; }
   .today-btn:not(.is-today) svg { fill: none; stroke: var(--label4); }
   .today-btn.is-today { opacity: 1 !important; }
 
@@ -2054,7 +2054,10 @@ function saveEditTask() {
     }
   } else {
     // Static task: store overrides + notes in state
-    state[id] = { ...(state[id] || {}), note: newNotes };
+    // Only save note if it differs from the built-in detail (avoids duplicate display)
+    const cleanNote = (newNotes === (t.detail || "")) ? "" : newNotes;
+    state[id] = { ...(state[id] || {}), note: cleanNote };
+    if (!cleanNote) delete state[id].note;
     if (newArea    !== t.area)    state[id].areaOverride    = newArea;
     else                          delete state[id].areaOverride;
     if (newSection !== t.section) state[id].sectionOverride = newSection;
@@ -2568,7 +2571,7 @@ function taskRowHTML(t) {
   }
 
   // Action buttons
-  const flagSVG = `<svg viewBox="0 0 14 14" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M2 2h8l-2 3 2 3H2V2z"/><line x1="2" y1="2" x2="2" y2="13"/></svg>`;
+  const flagSVG = `<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="7,1.5 8.6,5.2 12.5,5.6 9.7,8.1 10.5,12 7,10 3.5,12 4.3,8.1 1.5,5.6 5.4,5.2"/></svg>`;
   const noteSVG = `<svg viewBox="0 0 14 14" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M2 2h10v8H8l-2 2V10H2V2z"/></svg>`;
   const plusSVG = `<svg viewBox="0 0 14 14" stroke-width="2.2" stroke-linecap="round" fill="none"><line x1="7" y1="2" x2="7" y2="12"/><line x1="2" y1="7" x2="12" y2="7"/></svg>`;
 
