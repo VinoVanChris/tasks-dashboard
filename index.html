@@ -3165,7 +3165,7 @@ function rebuildSidebarAreas() {
       <button class="nav-item" onclick="setFilter('${a.id}',this)">
         <span class="area-dot-nav ${a.dotClass}"></span>
         <span class="nav-label">${getAreaLabel(a.id)}</span>
-        <button class="rename-btn" onclick="openRenameArea('${a.id}',event)" title="Rename">${pencil}</button>
+        <span class="rename-btn" onclick="openRenameArea('${a.id}',event)" title="Rename">${pencil}</span>
         <span class="nav-count" id="nc-${a.id}"></span>
       </button>`).join("");
   }
@@ -3176,7 +3176,7 @@ function rebuildSidebarAreas() {
     <button class="nav-item" onclick="setFilter('${a.id}',this)">
       <span class="area-dot-nav" style="background:var(--label4)"></span>
       <span class="nav-label">${getAreaLabel(a.id)}</span>
-      <button class="rename-btn" onclick="openRenameArea('${a.id}',event)" title="Rename">${pencil}</button>
+      <span class="rename-btn" onclick="openRenameArea('${a.id}',event)" title="Rename">${pencil}</span>
       <span class="nav-count" id="nc-${a.id}"></span>
     </button>`).join("");
 }
